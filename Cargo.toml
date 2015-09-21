@@ -1,0 +1,13 @@
+[package]
+name = "engine3d"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+glium = "*"
+log = "*" 
+image = "*"
+cgmath = "*"
+time = "0.1"
+num_cpus = "0.2"
+
