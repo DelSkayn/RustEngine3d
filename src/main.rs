@@ -2,6 +2,8 @@ extern crate engine3d;
 use engine3d::console;
 use engine3d::event;
 use engine3d::event::BaseEvent;
+use engine3d::event::KeyBoard;
+use engine3d::event::Key;
 use engine3d::window;
 
 use std::cell::RefCell;
@@ -23,6 +25,7 @@ fn main(){
             println!("Events: {:?}",event);
             match event{
                 BaseEvent::Quit => break 'main,
+                BaseEvent::KeyBoard(KeyBoard::Pressed(Key::Esc)) => break 'main,
                 _ => (),
             }
         }
