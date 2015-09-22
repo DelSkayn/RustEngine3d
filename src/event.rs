@@ -23,7 +23,8 @@ pub enum KeyBoard{
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum Key{
-    Key0, Key1,
+    Key0,
+    Key1,
     Key2,
     Key3,
     Key4,
