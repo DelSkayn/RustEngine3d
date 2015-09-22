@@ -12,6 +12,8 @@ pub mod console;
 pub mod event;
 pub mod window;
 pub mod engine;
+pub mod math;
+
 
 trait System{
     fn get_id() -> &'static str;
