@@ -11,6 +11,7 @@ extern crate time;
 pub mod console;
 pub mod event;
 pub mod window;
+pub mod engine;
 
 trait System{
     fn get_id() -> &'static str;

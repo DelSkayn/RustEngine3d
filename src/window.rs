@@ -90,8 +90,7 @@ impl Window{
            VirtualKeyCode::F3       => F3,
            VirtualKeyCode::F4       => F4,
            VirtualKeyCode::F5       => F5,
-           VirtualKeyCode::F6       => F6,
-           VirtualKeyCode::F7       => F7,
+           VirtualKeyCode::F6       => F6, VirtualKeyCode::F7       => F7,
            VirtualKeyCode::F8       => F8,
            VirtualKeyCode::F9       => F9,
            VirtualKeyCode::F10      => F10,
@@ -114,9 +113,9 @@ impl Window{
 }
 
 impl EventCreator<BaseEvent> for Window{
-    fn get_events(&mut self) -> Vec<BaseEvent>{
+    fn get_events(&self) -> Vec<BaseEvent>{
         self.window.poll_events().filter_map(
-            |ev| match ev{
+            |ev|match ev{
                 Event::Resized(w,h) => Some(BaseEvent::Resize(w,h)),
                 Event::Closed => Some(BaseEvent::Quit),
                 Event::MouseMoved((w,h)) => 
@@ -126,6 +125,8 @@ impl EventCreator<BaseEvent> for Window{
                 Event::MouseInput(ElementState::Released, x) => 
                     Some(BaseEvent::Mouse(Mouse::Released(Window::match_button(x)))),
                 Event::MouseWheel(MouseScrollDelta::LineDelta(_,y)) =>  
+                    Some(BaseEvent::Mouse(Mouse::Wheel(y))),
+                Event::MouseWheel(MouseScrollDelta::PixelDelta(_,y)) =>  
                     Some(BaseEvent::Mouse(Mouse::Wheel(y))),
                 Event::KeyboardInput(ElementState::Pressed,_,Some(x)) =>
                     Some(BaseEvent::KeyBoard(KeyBoard::Pressed(Window::match_key(x)))),

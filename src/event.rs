@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::cell::RefCell;
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum BaseEvent{
@@ -24,8 +23,7 @@ pub enum KeyBoard{
 
 #[derive(Copy,Clone,PartialEq,Debug)]
 pub enum Key{
-    Key0,
-    Key1,
+    Key0, Key1,
     Key2,
     Key3,
     Key4,
@@ -113,11 +111,11 @@ pub enum Button{
 }
 
 pub trait EventCreator<T>{
-    fn get_events(&mut self) -> Vec<T>;//TODO: look at better way to implement
+    fn get_events(&self) -> Vec<T>;//TODO: look at better way to implement
 }
 
 pub struct EventLoop<T>{
-    event_creator: Vec<Rc<RefCell<EventCreator<T>>>>,
+    event_creator: Vec<Rc<EventCreator<T>>>,
     events: Vec<T>,
 }
 
@@ -132,11 +130,11 @@ impl<T> EventLoop<T>{
     pub fn pull_events(&mut self){
         self.events.clear();
         for ec in &self.event_creator{
-            self.events.extend(ec.borrow_mut().get_events());
+            self.events.extend(ec.get_events());
         }
     }
 
-    pub fn register(&mut self,ec: Rc<RefCell<EventCreator<T>>>){
+    pub fn register(&mut self,ec: Rc<EventCreator<T>>){
         self.event_creator.push(ec);
     }
 

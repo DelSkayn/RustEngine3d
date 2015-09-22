@@ -3,6 +3,7 @@ use super::log;
 use log::{LogRecord, LogMetadata,SetLoggerError,LogLevelFilter};
 use log::LogLevel::*;
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::sync::atomic::AtomicBool; use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -81,7 +82,7 @@ impl ConsoleInput{
         let reading = self.reading.clone();
         let commands = self.commands.clone();
         thread::spawn(move ||{
-            let mut io_in = io::stdin();
+            let io_in = io::stdin();
             while reading.load(Ordering::Relaxed) {
                 let mut input = String::new();
                 io_in.read_line(&mut input).unwrap();
@@ -106,9 +107,9 @@ type ConsoleCommand<T> = Fn(&[&str]) -> Option<T>;
 //Struct handeling both the input and output and the
 //execution of commands from the console
 pub struct Console<T = BaseEvent>{
-    input: ConsoleInput,
+    input: RefCell<ConsoleInput>,
     commands: HashMap<&'static str,Box<ConsoleCommand<T>>>,
-    events: Vec<T>,
+    events: RefCell<Vec<T>>,
 }
 
 
@@ -129,9 +130,9 @@ impl<T> Console<T>{
             }));
         commands.insert("null",Box::new(|args|(None)));
         Console{
-            input: input,
+            input: RefCell::new(input),
             commands: commands,
-            events: Vec::new(),
+            events: RefCell::new(Vec::new()),
         }
     }
 
@@ -144,8 +145,9 @@ impl<T> Console<T>{
     //gets input and executes commands
     //There is one hardcoded command
     //namely 'commands' wich returns all existing commands
-    pub fn update(&mut self){
-        for e in self.input.get_message(){
+    pub fn update(&self){
+        let mut events = self.events.borrow_mut();
+        for e in self.input.borrow_mut().get_message(){
             let mut split = e.split_whitespace();
             let name = match split.next(){
                 None => continue,
@@ -165,7 +167,7 @@ impl<T> Console<T>{
                 Some(x) => {
                     let args: Vec<_> = split.collect();
                     if let Some(x) = x(&args){
-                        self.events.push(x);
+                        events.push(x);
                     }
                 }
             };
@@ -187,9 +189,9 @@ impl<T> Console<T>{
 }
 
 impl<T> EventCreator<T> for Console<T>{
-    fn get_events(&mut self) -> Vec<T>{
+    fn get_events(&self) -> Vec<T>{
         self.update();
-        mem::replace(&mut self.events,Vec::new())
+        mem::replace(&mut self.events.borrow_mut(),Vec::new())
     }
 }
 
