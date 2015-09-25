@@ -2,8 +2,7 @@ use std::ops::{
     Div,
     Sub,
     Mul,
-    Add,
-};
+    Add, };
 
 use std::default::Default;
 use std::fmt::Debug;
@@ -19,27 +18,27 @@ pub type Vector2d = Vector2<f64>;
 pub type Vector3d = Vector3<f64>;
 pub type Vector4d = Vector4<f64>;
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Vector2<T>
-    where T: Copy + Clone + Debug{
+    where T: Copy + Clone + Debug  + PartialEq{
         vec: [T; 2],
 }
 
 impl<T> Vector2<T>
-    where T: Default + Copy + Debug{ 
+    where T: Default + Copy + Debug  + PartialEq{ 
     pub fn new() -> Self{
         Vector2{
             vec: [T::default(); 2], 
         }
     }
 
-    pub fn form_array(array: [T; 2]) -> Self{
+    pub fn from_array(array: [T; 2]) -> Self{
         Vector2{
             vec: array,
         }
     }
 
-    pub fn form_coords(x: T,y: T) -> Self{
+    pub fn from_coords(x: T,y: T) -> Self{
         Vector2{
             vec: [x,y],
         }
@@ -53,7 +52,7 @@ impl<T> Vector2<T>
 }
 
 impl<T> Vector2<T>
-    where T:Add<Output = T> + Mul<Output = T> + Copy + Debug{
+    where T:Add<Output = T> + Mul<Output = T> + Copy + Debug  + PartialEq{
         pub fn dot(&self,other: &Vector2<T>) -> T{
             self.vec[0] * other.vec[0] +
                 self.vec[1] * self.vec[1]
@@ -63,12 +62,12 @@ impl<T> Vector2<T>
 impl Vector2<f32>{
     pub fn from_angle(angle: f32) -> Self{
         Vector2{
-            vec: [angle.cos(),angle.sin()],
+            vec: [angle.sin(),angle.cos()],
         }
     }
 
     pub fn from_angle_degrees(angle: f32) -> Self{
-        Self::from_angle(angle / 360.0 * fconsts::PI)
+        Self::from_angle(angle / 180.0 * fconsts::PI)
     }
 
     pub fn normalize(&mut self){
@@ -117,7 +116,7 @@ impl Vector2<f64>{
 }
 
 impl<T> Add for Vector2<T>
-    where T: Add<Output = T> + Copy + Debug{//That is amazing that you can specify Output
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {//That is amazing that you can specify Output
     type Output = Vector2<T>;
 
     fn add(self, other: Vector2<T>) -> Vector2<T>{
@@ -129,7 +128,7 @@ impl<T> Add for Vector2<T>
 }
 
 impl<'a,T> Add for &'a Vector2<T>
-    where T: Add<Output = T> + Copy + Debug{
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {
     type Output = Vector2<T>;
 
     fn add(self, other: &'a Vector2<T>) -> Vector2<T>{
@@ -141,7 +140,7 @@ impl<'a,T> Add for &'a Vector2<T>
 }
 
 impl<T> Sub for Vector2<T>
-    where T: Sub<Output = T> + Copy + Debug{//That is amazing
+    where T: Sub<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector2<T>;
 
     fn sub(self, other: Vector2<T>) -> Vector2<T>{
@@ -153,7 +152,7 @@ impl<T> Sub for Vector2<T>
 }
 
 impl<T> Mul<T> for Vector2<T>
-    where T: Mul<Output = T> + Copy + Debug{
+    where T: Mul<Output = T> + Copy + Debug  + PartialEq {
     type Output = Vector2<T>;
 
     fn mul(self, other: T) -> Vector2<T>{
@@ -165,7 +164,7 @@ impl<T> Mul<T> for Vector2<T>
 }
 
 impl<T> Div<T> for Vector2<T>
-    where T: Div<Output = T> + Copy + Debug{//That is amazing
+    where T: Div<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector2<T>;
 
     fn div(self, other: T) -> Vector2<T>{
@@ -176,28 +175,28 @@ impl<T> Div<T> for Vector2<T>
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Vector3<T>
-    where T: Copy + Debug{
+    where T: Copy + Debug  + PartialEq {
     
         vec: [T; 3],
 }
 
 impl<T> Vector3<T>
-    where T: Default + Copy + Debug{ 
+    where T: Default + Copy + Debug  + PartialEq { 
     pub fn new() -> Self{
         Vector3{
             vec: [T::default(); 3], 
         }
     }
 
-    pub fn form_array(array: [T; 3]) -> Self{
+    pub fn from_array(array: [T; 3]) -> Self{
         Vector3{
             vec: array,
         }
     }
 
-    pub fn form_coords(x: T,y: T,z: T) -> Self{
+    pub fn from_coords(x: T,y: T,z: T) -> Self{
         Vector3{
             vec: [x,y,z],
         }
@@ -241,7 +240,7 @@ impl Vector3<f64>{
 }
 
 impl<T> Vector3<T>
-    where T:Mul<Output = T> + Add<Output = T> + Copy + Debug{
+    where T:Mul<Output = T> + Add<Output = T> + Copy + Debug  + PartialEq {
         pub fn dot(&self,other: &Vector2<T>) -> T{
             self.vec[0] * other.vec[0] +
                 self.vec[1] * self.vec[1] +
@@ -250,7 +249,7 @@ impl<T> Vector3<T>
 }
 
 impl<T> Add for Vector3<T>
-    where T: Add<Output = T> + Copy + Debug{//That is amazing that you can specify Output
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {//That is amazing that you can specify Output
     type Output = Vector3<T>;
 
     fn add(self, other: Vector3<T>) -> Vector3<T>{
@@ -265,7 +264,7 @@ impl<T> Add for Vector3<T>
 }
 
 impl<'a,T> Add for &'a Vector3<T>
-    where T: Add<Output = T> + Copy + Debug{
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {
     type Output = Vector3<T>;
 
     fn add(self, other: &'a Vector3<T>) -> Vector3<T>{
@@ -280,7 +279,7 @@ impl<'a,T> Add for &'a Vector3<T>
 }
 
 impl<T> Sub for Vector3<T>
-    where T: Sub<Output = T> + Copy + Debug{//That is amazing
+    where T: Sub<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector3<T>;
 
     fn sub(self, other: Vector3<T>) -> Vector3<T>{
@@ -295,7 +294,7 @@ impl<T> Sub for Vector3<T>
 }
 
 impl<T> Mul<T> for Vector3<T>
-    where T: Mul<Output = T> + Copy + Debug{//That is amazing
+    where T: Mul<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector3<T>;
 
     fn mul(self, other: T) -> Vector3<T>{
@@ -310,7 +309,7 @@ impl<T> Mul<T> for Vector3<T>
 }
 
 impl<T> Div<T> for Vector3<T>
-    where T: Div<Output = T> + Copy + Debug{//That is amazing
+    where T: Div<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector3<T>;
 
     fn div(self, other: T) -> Vector3<T>{
@@ -324,27 +323,27 @@ impl<T> Div<T> for Vector3<T>
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Vector4<T>
     where T: Debug + Copy{
         vec: [T; 4],
 }
 
 impl<T> Vector4<T>
-    where T: Default + Copy + Debug{ 
+    where T: Default + Copy + Debug  + PartialEq { 
     pub fn new() -> Self{
         Vector4{
             vec: [T::default(); 4], 
         }
     }
 
-    pub fn form_array(array: [T; 4]) -> Self{
+    pub fn from_array(array: [T; 4]) -> Self{
         Vector4{
             vec: array,
         }
     }
 
-    pub fn form_coords(w: T,x: T,y: T,z: T) -> Self{
+    pub fn from_coords(w: T,x: T,y: T,z: T) -> Self{
         Vector4{
             vec: [w,x,y,z],
         }
@@ -358,7 +357,7 @@ impl<T> Vector4<T>
 }
 
 impl<T> Vector4<T>
-    where T:Mul<Output = T> + Add<Output = T> + Copy + Debug{
+    where T:Mul<Output = T> + Add<Output = T> + Copy + Debug  + PartialEq {
         pub fn dot(&self,other: &Vector2<T>) -> T{
             self.vec[0] * other.vec[0] +
                 self.vec[1] * self.vec[1] +
@@ -398,7 +397,7 @@ impl Vector4<f64>{
 }
 
 impl<T> Add for Vector4<T>
-    where T: Add<Output = T> + Copy + Debug{//That is amazing that you can specify Output
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {//That is amazing that you can specify Output
     type Output = Vector4<T>;
 
     fn add(self, other: Vector4<T>) -> Vector4<T>{
@@ -414,7 +413,7 @@ impl<T> Add for Vector4<T>
 }
 
 impl<'a,T> Add for &'a Vector4<T>
-    where T: Add<Output = T> + Copy + Debug{
+    where T: Add<Output = T> + Copy + Debug  + PartialEq {
     type Output = Vector4<T>;
 
     fn add(self, other: &'a Vector4<T>) -> Vector4<T>{
@@ -430,7 +429,7 @@ impl<'a,T> Add for &'a Vector4<T>
 }
 
 impl<T> Sub for Vector4<T>
-    where T: Sub<Output = T> + Copy + Debug{//That is amazing
+    where T: Sub<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector4<T>;
 
     fn sub(self, other: Vector4<T>) -> Vector4<T>{
@@ -446,7 +445,7 @@ impl<T> Sub for Vector4<T>
 }
 
 impl<T> Mul<T> for Vector4<T>
-    where T: Mul<Output = T> + Copy + Debug{//That is amazing
+    where T: Mul<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector4<T>;
 
     fn mul(self, other: T) -> Vector4<T>{
@@ -462,7 +461,7 @@ impl<T> Mul<T> for Vector4<T>
 }
 
 impl<T> Div<T> for Vector4<T>
-    where T: Div<Output = T> + Copy + Debug{//That is amazing
+    where T: Div<Output = T> + Copy + Debug  + PartialEq {//That is amazing
     type Output = Vector4<T>;
 
     fn div(self, other: T) -> Vector4<T>{
@@ -477,14 +476,14 @@ impl<T> Div<T> for Vector4<T>
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Matrix3<T>
-    where T: Copy + Debug{
+    where T: Copy + Debug  + PartialEq {
     mat: [[T; 3]; 3],
 }
 
 impl<T> Matrix3<T>
-    where T: Default + Copy + Debug{
+    where T: Default + Copy + Debug  + PartialEq {
     pub fn new() -> Self{
         Matrix3{
             mat: [[T::default(); 3]; 3],
@@ -508,14 +507,19 @@ impl<T> Matrix3<T>
     }
 }
 
-impl Mul for Matrix3<T>
-where T: Add<Output = T> + Mul<Output = T>{
+impl<T> Mul for Matrix3<T>
+where T: Add<Output = T> + Mul<Output = T> + Copy + Debug  + PartialEq  + Default{
     type Output = Self;
-    fn mul(self,other: Self){
-        Matrix3{
-            mat: [
-                
+    fn mul(self,other: Self) -> Self{
+        let mut res = Matrix3::<T>::new();
+        for i in 0..3{
+            for j in 0..3{
+                for k in 0..3{
+                    res.mat[i][j] = res.mat[i][j] + self.mat[k][j] * other.mat[i][k];
+                }
+            }
         }
+        res
     }
 }
 
@@ -543,14 +547,14 @@ impl Matrix3<f64>{
     }
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Matrix4<T>
-where T: Copy + Debug{
+where T: Copy + Debug  + PartialEq {
     mat: [[T; 4]; 4],
 }
 
 impl<T> Matrix4<T>
-where T: Default + Copy + Debug{
+where T: Default + Copy + Debug  + PartialEq {
     pub fn new() -> Self{
         Matrix4{
             mat: [[T::default(); 4]; 4],
@@ -573,6 +577,22 @@ where T: Default + Copy + Debug{
                 fou.vec
             ],
         }
+    }
+}
+
+impl<T> Mul for Matrix4<T>
+where T: Add<Output = T> + Mul<Output = T> + Copy + Debug  + PartialEq  + Default{
+    type Output = Self;
+    fn mul(self,other: Self) -> Self{
+        let mut res = Matrix4::<T>::new();
+        for i in 0..4{
+            for j in 0..4{
+                for k in 0..4{
+                    res.mat[i][j] = res.mat[i][j] + (self.mat[k][j] * other.mat[i][k]);
+                }
+            }
+        }
+        res
     }
 }
 
@@ -600,4 +620,51 @@ impl Matrix4<f64>{
             ],
         }
     }
+}
+
+#[cfg(test)]
+mod test{
+    #![allow(dead_code)]
+    use super::*;
+    use std::f32::consts;
+    #[test]
+    fn test(){
+        let vec = Vector2f::new();
+        let vec2 = Vector2f::from_array([3.4,5.6]);
+        let vec3 = Vector2f::from_angle(consts::PI/2.0);
+        let vec4 = Vector2f::from_angle_degrees(90.0);
+        let add = vec + vec2 + vec3 + vec4;
+        println!("{:?}",vec);
+        println!("{:?}",vec2);
+        println!("{:?}",vec3);
+        println!("{:?}",vec4);
+        println!("{:?}", add);
+        assert!(Vector2f::from_array([5.4,5.6]) == add);
+
+        let mat  = Matrix4::from_array([
+                       [3.0,2.0,5.0,7.0],
+                       [6.0,7.0,4.0,3.0],
+                       [9.0,5.0,3.0,5.0],
+                       [9.0,5.0,3.0,5.0]
+        ]);
+
+        let mat2 = Matrix4::from_array([
+                       [1.0,2.0,3.0,5.0],
+                       [5.0,3.0,6.0,5.0],
+                       [2.0,4.0,7.0,2.0],
+                       [9.0,5.0,7.0,1.0]
+        ]);
+
+        let matmul = mat * mat2;
+        println!("{:?}",mat);
+        println!("{:?}",mat2);
+        println!("{:?}",matmul);
+        assert!(Matrix4::from_array([
+                                   [87.0,56.0,37.0,53.0],
+                                   [132.0,86.0,70.0,99.0],
+                                   [111.0,77.0,53.0,71.0],
+                                   [129.0,93.0,89.0,118.0]
+        ]) == matmul);
+    }
+
 }
