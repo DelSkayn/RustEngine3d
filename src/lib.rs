@@ -13,6 +13,8 @@ pub mod event;
 pub mod window;
 pub mod engine;
 pub mod math;
+pub mod mesh;
+pub mod obj;
 
 
 trait System{
