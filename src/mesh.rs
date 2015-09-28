@@ -1,12 +1,3 @@
-#[macro_use]
-use super::glium;
-
-use super::image;
-
-use image::{
-    DynamicImage,
-    GenericImage,
-};
 
 #[derive(Copy,Clone)]
 pub struct MeshVertex{
