@@ -35,7 +35,7 @@ impl ObjLoader{
         while let Some(word) = iter.next(){
             match word{
                 "v" => {
-                    debug!("Found vertex");
+                    trace!("Found vertex");
                     let mut value = [0.0; 3];
 
                     let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
@@ -50,7 +50,7 @@ impl ObjLoader{
                     vertecies.push(value);
                 }
                 "vn" => {
-                    debug!("Found normal");
+                    trace!("Found normal");
                     let mut value = [0.0; 3];
 
                     let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
@@ -66,7 +66,7 @@ impl ObjLoader{
 
                 }
                 "f" => {
-                    debug!("Found index");
+                    trace!("Found index");
                     if format == IndexFormat::NotTested{
                         let test_word = try!(iter.peek().ok_or(ObjError::InvalidFormat("could not get index"))).clone();
                         let format_split: Vec<&str> = test_word.split("/").collect();
@@ -80,7 +80,7 @@ impl ObjLoader{
                                 format = IndexFormat::VTN;
                             }
                         }
-                        debug!("Found index format {:?}",format);
+                        trace!("Found index format {:?}",format);
                     }
                     match format{
                         IndexFormat::Normal => {

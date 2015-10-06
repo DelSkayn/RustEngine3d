@@ -65,7 +65,7 @@ in VS_OUT{
 out vec4 color;
 
 void main(){
-    color = vec4(fs_in.color,1.0);
+    color = vec4(1.0,1.0,1.0,1.0);
 }
 "#;
 
@@ -140,7 +140,10 @@ impl RenderEngine{
 
     pub fn render<'a>(&'a self,renderque: RenderQueue<'a>){
         let mut target = self.window.get_display().draw();
+
+
         for obj in renderque.queue{
+        debug!("Model: {:?}",renderque.cam.get_view());
         let uniform = uniform!{
             _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
             _CamTransform: renderque.cam.get_view().as_array(),

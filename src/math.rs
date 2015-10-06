@@ -284,10 +284,10 @@ impl Vector3<f64>{
 
 impl<T> Vector3<T>
     where T:Mul<Output = T> + Add<Output = T> + Copy + Debug  + PartialEq {
-        pub fn dot(&self,other: &Vector2<T>) -> T{
+        pub fn dot(&self,other: &Vector3<T>) -> T{
             self.vec[0] * other.vec[0] +
-                self.vec[1] * self.vec[1] +
-                self.vec[2] * self.vec[2]
+                self.vec[1] * other.vec[1] +
+                self.vec[2] * other.vec[2]
         }
 }
 
@@ -675,16 +675,17 @@ impl Matrix4<f32>{
 
     pub fn as_translation(trans: Vector3f) -> Self{
         let mut res = Matrix4f::identity();
-        res.mat[0][3] = trans.vec[0];
-        res.mat[1][3] = trans.vec[1];
-        res.mat[2][3] = trans.vec[2];
+        res.mat[3][1] = trans.vec[0];
+        res.mat[3][2] = trans.vec[1];
+        res.mat[3][3] = trans.vec[2];
+        println!("AAAA");
         res
     }
 
     pub fn translate(mut self,trans: Vector3f) -> Self{
-        self.mat[0][3] += trans.vec[0];
-        self.mat[1][3] += trans.vec[1];
-        self.mat[2][3] += trans.vec[2];
+        self.mat[3][1] += trans.vec[0];
+        self.mat[3][2] += trans.vec[1];
+        self.mat[3][3] += trans.vec[2];
         self
     }
 }

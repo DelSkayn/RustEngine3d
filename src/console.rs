@@ -15,7 +15,9 @@ use std::sync::mpsc::Sender;
 use std::sync::mpsc::TryRecvError;
 use std::io;
 use std::fs::File;
+use std::io::Write;
 use std::collections::HashMap;
+use std::ops::Drop;
 
 use std::mem;
 
@@ -124,6 +126,7 @@ pub struct Console<T = BaseEvent>{
     events: RefCell<Vec<T>>,
     log_channel: Receiver<String>,
     enable_logging: Cell<bool>,
+    log_file: RefCell<File>,
 }
 
 
@@ -133,6 +136,9 @@ impl<T> Console<T>{
         input.run();
         let recv = ConsoleLogger::init().unwrap();
         let mut commands = HashMap::<&'static str,Box<ConsoleCommand<T>>>::new();
+        let file = File::create("log.txt").unwrap();
+
+
         commands.insert("echo",Box::new(
             |args:&[&str]|{
                 print!("[echo]");
@@ -143,12 +149,14 @@ impl<T> Console<T>{
                 None
             }));
         commands.insert("null",Box::new(|args|(None)));
+
         Console{
             input: RefCell::new(input),
             commands: commands,
             events: RefCell::new(Vec::new()),
             log_channel: recv,
             enable_logging: Cell::new(true),
+            log_file: RefCell::new(file),
         }
     }
 
@@ -161,7 +169,10 @@ impl<T> Console<T>{
     fn handel_logging(&self){
         loop{
             match self.log_channel.try_recv() {
-                Ok(x) => println!("{}",x),
+                Ok(x) => {
+                    println!("{}",x);
+                    write!(self.log_file.borrow_mut(),"{}\n",x).unwrap();
+                }
                 Err(x) => match x{
                     TryRecvError::Empty => break,
                     TryRecvError::Disconnected => println!("Error, logging channel disconnected!"),
@@ -233,3 +244,9 @@ impl<T> EventCreator<T> for Console<T>{
     }
 }
 
+impl<T> Drop for Console<T>{
+    fn drop(&mut self){
+        //log pending messages
+        self.update();
+    }
+}

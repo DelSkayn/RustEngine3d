@@ -56,18 +56,21 @@ impl Engine{
 
         let ren_obj = RenderObject{
             mesh: &mesh,
-            transform: Matrix4f::as_translation(Vector3f::from_coords(1.0,1.0,0.0)),
+            transform: Matrix4f::as_translation(Vector3f::from_coords(0.0,0.0,-10.0)),
         };
+
+        let mut cam = Camera::with_perspective(90.0,800.0/800.0,1.0,10000.0);
+        cam.look_at(Vector3f::from_coords(0.0,0.0,-10.0));
         
         let que = RenderQueue{
             queue: vec![ren_obj],
-            cam: Camera::with_perspective(90.0,800.0/600.0,10.0,0.001),
+            cam: cam,
         };
 
         while self.running{
             self.event_loop.pull_events();
             for &event in self.event_loop.get_events(){
-                debug!("Events: {:?}",event);
+                trace!("Events: {:?}",event);
                 match event{
                     BaseEvent::Quit => {self.running = false;},
                     BaseEvent::KeyBoard(KeyBoard::Pressed(Key::Esc)) => {self.running = false;},
@@ -77,6 +80,7 @@ impl Engine{
                 
             renderengine.render(que.clone());
         }
+        info!("Quiting engine!");
     }
 
 }
