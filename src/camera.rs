@@ -1,7 +1,7 @@
 
 use super::math::*;
 
-#[derive(Copy,Debug)]
+#[derive(Clone,Copy,Debug)]
 pub struct Camera{
     perspective: Matrix4f,
     rotation: Quatf,
@@ -11,18 +11,26 @@ pub struct Camera{
 impl Camera{
     pub fn new() -> Self{
         Camera{
-            perspective: Matrix4::new(),
+            perspective: Matrix4f::identity(),
             rotation: Quatf::new(),
-            position: Vector2f::new(),
+            position: Vector3f::new(),
         }
     }
 
     pub fn with_perspective(fov: f32,aspect_ratio: f32,z_far: f32,z_near: f32) -> Self{
         Camera{
-            perspective: Matrix4::as_perspective(fov,aspect_ratio,z_far,z_near),
+            perspective: Matrix4f::as_perspective(fov,aspect_ratio,z_far,z_near),
             rotation: Quatf::new(),
-            position: Vector2f::new(),
+            position: Vector3f::new(),
         }
+    }
+
+    pub fn get_perpective(&self) -> Matrix4f{
+        self.perspective
+    }
+
+    pub fn get_view(&self) -> Matrix4f{
+        self.rotation.to_matrix()
     }
 }
 

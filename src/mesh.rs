@@ -9,7 +9,7 @@ pub struct MeshVertex{
 
 implement_vertex!(MeshVertex,position,normal);
 
-pub struct Mesh<I>{
+pub struct Mesh{
     pub vertecies: Vec<MeshVertex>,
-    pub index: Vec<I>,
+    pub index: Vec<u16>,
 }

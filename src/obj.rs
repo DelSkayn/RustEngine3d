@@ -23,9 +23,7 @@ impl ObjLoader{
         }
     }
     
-    pub fn load(self) -> Result<mesh::Mesh<u16>,ObjError>{
-        let mut vertecies_found = 0;
-        let mut normals_found = 0;
+    pub fn load(self) -> Result<mesh::Mesh,ObjError>{
         let mut format = IndexFormat::NotTested;
         let mut vertecies = Vec::new();
         let mut normals = Vec::new();
@@ -38,7 +36,6 @@ impl ObjLoader{
             match word{
                 "v" => {
                     debug!("Found vertex");
-                    vertecies_found  += 1;
                     let mut value = [0.0; 3];
 
                     let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
@@ -54,7 +51,6 @@ impl ObjLoader{
                 }
                 "vn" => {
                     debug!("Found normal");
-                    normals_found  += 1;
                     let mut value = [0.0; 3];
 
                     let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
@@ -67,6 +63,7 @@ impl ObjLoader{
                     value[2] = try!(normal_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse normal"))));
 
                     normals.push(value);
+
                 }
                 "f" => {
                     debug!("Found index");
@@ -121,10 +118,11 @@ impl ObjLoader{
                 }
             }
         }
+        info!("Found vertecies: {}, normals: {}, indecies: {}",vertecies.len(),normals.len(),0);
 
         //place normals in proper place
         if format == IndexFormat::VTN || format == IndexFormat::VNullN {
-            let mut old = normals;
+            let old = normals;
             normals = Vec::with_capacity(vertecies.len());
             unsafe{
                 normals.set_len(vertecies.len());
@@ -147,7 +145,6 @@ impl ObjLoader{
         }
         */
 
-        info!("Found vertecies: {}, normals: {}, indecies: {}",vertecies.len(),normals.len(),0);
         let mut vertex_res = Vec::with_capacity(vertecies.len());
         for i in 0..vertecies.len(){
             vertex_res.push(mesh::MeshVertex{

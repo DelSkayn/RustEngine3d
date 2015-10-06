@@ -59,6 +59,10 @@ impl<T> Vector2<T>
         }
     }
 
+    pub fn as_array(self) -> [T; 2]{
+        self.vec
+    }
+
 }
 
 impl<T> Vector2<T>
@@ -227,6 +231,9 @@ impl<T> Vector3<T>
             vec: [tup.0,tup.1,tup.2],
         }
     }
+    pub fn as_array(self) -> [T; 3]{
+        self.vec
+    }
 }
 
 impl Vector3<f32>{
@@ -390,6 +397,10 @@ impl<T> Vector4<T>
             vec: [tup.0,tup.1,tup.2,tup.3],
         }
     }
+
+    pub fn as_array(self) -> [T; 4]{
+        self.vec
+    }
 }
 
 impl<T> Vector4<T>
@@ -545,6 +556,10 @@ impl<T> Matrix3<T>
                 ],
         }
     }
+
+    pub fn as_array(self) -> [[T; 3]; 3]{
+        self.mat
+    }
 }
 
 impl<T> Mul for Matrix3<T>
@@ -618,6 +633,10 @@ where T: Default + Copy + Debug  + PartialEq {
             ],
         }
     }
+
+    pub fn as_array(self) -> [[T; 4]; 4]{
+        self.mat
+    }
 }
 
 impl Matrix4<f32>{
@@ -652,6 +671,21 @@ impl Matrix4<f32>{
                 [0.0,0.0,2.0*-z_far*z_near/z_range,0.0]
             ]
         }
+    }
+
+    pub fn as_translation(trans: Vector3f) -> Self{
+        let mut res = Matrix4f::identity();
+        res.mat[0][3] = trans.vec[0];
+        res.mat[1][3] = trans.vec[1];
+        res.mat[2][3] = trans.vec[2];
+        res
+    }
+
+    pub fn translate(mut self,trans: Vector3f) -> Self{
+        self.mat[0][3] += trans.vec[0];
+        self.mat[1][3] += trans.vec[1];
+        self.mat[2][3] += trans.vec[2];
+        self
     }
 }
 
@@ -778,6 +812,25 @@ impl Quat<f32>{
             }
         }
 
+        pub fn to_matrix(self) -> Matrix4<f32>{
+            let forward = Vector3::<f32>::from_array([
+                                                   2.0 * (self.quat[1] * self.quat[3] - self.quat[0] * self.quat[2]),
+                                                   2.0 * (self.quat[2] * self.quat[3] + self.quat[0] * self.quat[1]),
+                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[2] * self.quat[2])
+            ]);
+            let up = Vector3::<f32>::from_array([
+                                                   2.0 * (self.quat[1] * self.quat[2] + self.quat[0] * self.quat[3]),
+                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[3] * self.quat[3]),
+                                                   2.0 * (self.quat[2] * self.quat[3] - self.quat[0] * self.quat[1])
+            ]);
+            let right = Vector3::<f32>::from_array([
+                                                   1.0 - 2.0 * (self.quat[2] * self.quat[2] + self.quat[3] * self.quat[3]),
+                                                   2.0 * (self.quat[1] * self.quat[2] - self.quat[0] * self.quat[3]),
+                                                   2.0 * (self.quat[1] * self.quat[3] + self.quat[0] * self.quat[2])
+            ]);
+            Matrix4::<f32>::as_rotation_full(forward,up,right)
+        }
+
 }
 
 impl Quat<f64>{
@@ -797,6 +850,25 @@ impl Quat<f64>{
                     axis.vec[2] * sin,
                     angle_2.cos()],
             }
+        }
+
+        pub fn to_matrix(self) -> Matrix4<f64>{
+            let forward = Vector3::<f64>::from_array([
+                                                   2.0 * (self.quat[1] * self.quat[3] - self.quat[0] * self.quat[2]),
+                                                   2.0 * (self.quat[2] * self.quat[3] + self.quat[0] * self.quat[1]),
+                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[2] * self.quat[2])
+            ]);
+            let up = Vector3::<f64>::from_array([
+                                                   2.0 * (self.quat[1] * self.quat[2] + self.quat[0] * self.quat[3]),
+                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[3] * self.quat[3]),
+                                                   2.0 * (self.quat[2] * self.quat[3] - self.quat[0] * self.quat[1])
+            ]);
+            let right = Vector3::<f64>::from_array([
+                                                   1.0 - 2.0 * (self.quat[2] * self.quat[2] + self.quat[3] * self.quat[3]),
+                                                   2.0 * (self.quat[1] * self.quat[2] - self.quat[0] * self.quat[3]),
+                                                   2.0 * (self.quat[1] * self.quat[3] + self.quat[0] * self.quat[2])
+            ]);
+            Matrix4::<f64>::as_rotation_full(forward,up,right)
         }
 }
 

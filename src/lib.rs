@@ -16,6 +16,7 @@ pub mod math;
 pub mod mesh;
 pub mod obj;
 pub mod camera;
+pub mod render;
 
 
 trait System{
