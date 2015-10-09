@@ -1,4 +1,3 @@
-
 use super::glium::*;
 //use super::glium::draw_parameters::PolygonMode;
 
@@ -50,9 +49,9 @@ void main(){
     vs_out.color = normal;
 
     vec4 p = vec4(position,1.0);
-    mat4 trans = _ModelTransform * _CamTransform * _ModelTransform;
+    mat4 trans =    _PerspectiveTransform * _CamTransform * _ModelTransform;
 
-    gl_Position = p;
+    gl_Position = trans * p;
 }
 
 "#;
@@ -143,14 +142,7 @@ impl RenderEngine{
     pub fn render<'a>(&'a self,renderque: RenderQueue<'a>){
         let mut target = self.window.get_display().draw();
 
-        let draw_param = DrawParameters{
-            polygon_mode: PolygonMode::Line,
-            .. Default::default()
-        };
-
-
         for obj in renderque.queue{
-        //debug!("Model: {:?}",renderque.cam.get_view());
         let uniform = uniform!{
             _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
             _CamTransform: renderque.cam.get_view().as_array(),
@@ -158,7 +150,7 @@ impl RenderEngine{
         };
             target.draw(&obj.mesh.vertex,&obj.mesh.index
                         ,&self.shader,&uniform
-                        ,&draw_param).unwrap();
+                        ,&Default::default()).unwrap();
             
         }
         target.finish().unwrap();

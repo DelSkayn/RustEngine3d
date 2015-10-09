@@ -125,6 +125,7 @@ impl ObjLoader{
             let old = normals;
             normals = Vec::with_capacity(vertecies.len());
             unsafe{
+                //faster than pushing vertecies.len() times
                 normals.set_len(vertecies.len());
             }
             for i in 0..vertecies.len(){

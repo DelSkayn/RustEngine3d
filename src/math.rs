@@ -2,7 +2,8 @@ use std::ops::{
     Div,
     Sub,
     Mul,
-    Add, };
+    Add,
+};
 
 use std::default::Default;
 use std::fmt::Debug;
@@ -386,9 +387,9 @@ impl<T> Vector4<T>
         }
     }
 
-    pub fn from_coords(w: T,x: T,y: T,z: T) -> Self{
+    pub fn from_coords(x: T,y: T,z: T,w: T) -> Self{
         Vector4{
-            vec: [w,x,y,z],
+            vec: [x,y,z,w],
         }
     }
 
@@ -667,7 +668,7 @@ impl Matrix4<f32>{
             mat: [
                 [1.0/(tan_half_fov * aspect_ratio), 0.0, 0.0,0.0],
                 [0.0,1.0/tan_half_fov,0.0,0.0],
-                [0.0,0.0,(z_near + z_far)/z_range,-1.0],
+                [0.0,0.0,(-z_near - z_far)/z_range,-1.0],
                 [0.0,0.0,2.0*-z_far*z_near/z_range,0.0]
             ]
         }
@@ -675,16 +676,16 @@ impl Matrix4<f32>{
 
     pub fn as_translation(trans: Vector3f) -> Self{
         let mut res = Matrix4f::identity();
-        res.mat[3][1] = trans.vec[0];
-        res.mat[3][2] = trans.vec[1];
-        res.mat[3][3] = trans.vec[2];
+        res.mat[3][0] = trans.vec[0];
+        res.mat[3][1] = trans.vec[1];
+        res.mat[3][2] = trans.vec[2];
         res
     }
 
     pub fn translate(mut self,trans: Vector3f) -> Self{
-        self.mat[3][1] += trans.vec[0];
-        self.mat[3][2] += trans.vec[1];
-        self.mat[3][3] += trans.vec[2];
+        self.mat[3][0] += trans.vec[0];
+        self.mat[3][1] += trans.vec[1];
+        self.mat[3][2] += trans.vec[2];
         self
     }
 }
@@ -722,6 +723,21 @@ impl Matrix4<f64>{
             ]
         }
     }
+
+    pub fn as_translation(trans: Vector3<f64>) -> Self{
+        let mut res = Matrix4::<f64>::identity();
+        res.mat[3][0] = trans.vec[0];
+        res.mat[3][1] = trans.vec[1];
+        res.mat[3][2] = trans.vec[2];
+        res
+    }
+
+    pub fn translate(mut self,trans: Vector3<f64>) -> Self{
+        self.mat[3][0] += trans.vec[0];
+        self.mat[3][1] += trans.vec[1];
+        self.mat[3][2] += trans.vec[2];
+        self
+    }
 }
 
 impl<T> Mul for Matrix4<T>
@@ -751,6 +767,149 @@ impl Matrix4<f32>{
             ],
         }
     }
+
+    pub fn invert(self) -> Self{
+        let mut res = Matrix4::<f32>::new();
+
+        res.mat[0][0] = self.mat[1][1] * self.mat[2][2] * self.mat[3][3] -
+            self.mat[1][1] * self.mat[2][3] * self.mat[3][2] -
+            self.mat[2][1] * self.mat[1][2] * self.mat[3][3] +
+            self.mat[2][1] * self.mat[1][3] * self.mat[3][2] +
+            self.mat[3][1] * self.mat[1][2] * self.mat[2][3] -
+            self.mat[3][1] * self.mat[1][3] * self.mat[2][2] ;
+
+        res.mat[1][0] = -self.mat[1][0] * self.mat[2][2] * self.mat[3][3] +
+            self.mat[1][0] * self.mat[2][3] * self.mat[3][2] +
+            self.mat[2][0] * self.mat[1][2] * self.mat[3][3] -
+            self.mat[2][0] * self.mat[1][3] * self.mat[3][2] -
+            self.mat[3][0] * self.mat[1][2] * self.mat[2][3] +
+            self.mat[3][0] * self.mat[1][3] * self.mat[2][2] ;
+
+        res.mat[2][0] = self.mat[1][0] * self.mat[2][1] * self.mat[3][3] -
+            self.mat[1][0] * self.mat[2][3] * self.mat[3][1] -
+            self.mat[2][0] * self.mat[1][1] * self.mat[3][3] +
+            self.mat[2][0] * self.mat[1][3] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[1][1] * self.mat[2][3] -
+            self.mat[3][0] * self.mat[1][3] * self.mat[2][1] ;
+
+        //Oh self.maty god
+
+        res.mat[3][0] = -self.mat[1][0] * self.mat[2][1] * self.mat[3][2] +
+            self.mat[1][0] * self.mat[2][2] * self.mat[3][1] +
+            self.mat[2][0] * self.mat[1][1] * self.mat[3][2] -
+            self.mat[2][0] * self.mat[1][2] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[1][1] * self.mat[2][2] +
+            self.mat[3][0] * self.mat[1][2] * self.mat[2][1] ;
+
+        res.mat[0][1] = -self.mat[0][1] * self.mat[2][2] * self.mat[3][3] +
+            self.mat[0][1] * self.mat[2][3] * self.mat[3][2] +
+            self.mat[2][1] * self.mat[0][2] * self.mat[3][3] -
+            self.mat[2][1] * self.mat[0][3] * self.mat[3][2] -
+            self.mat[3][1] * self.mat[0][2] * self.mat[2][3] +
+            self.mat[3][1] * self.mat[0][3] * self.mat[2][2] ;
+
+        res.mat[1][1] = self.mat[0][0] * self.mat[2][2] * self.mat[3][3] -
+            self.mat[0][0] * self.mat[2][3] * self.mat[3][2] -
+            self.mat[2][0] * self.mat[0][2] * self.mat[3][3] +
+            self.mat[2][0] * self.mat[0][3] * self.mat[3][2] +
+            self.mat[3][0] * self.mat[0][2] * self.mat[2][3] -
+            self.mat[3][0] * self.mat[0][3] * self.mat[2][2] ;
+
+        //it keeps going on
+
+        res.mat[2][1] = -self.mat[0][0] * self.mat[2][1] * self.mat[3][3] +
+            self.mat[0][0] * self.mat[2][3] * self.mat[3][1] +
+            self.mat[2][0] * self.mat[0][1] * self.mat[3][3] -
+            self.mat[2][0] * self.mat[0][3] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[0][1] * self.mat[2][3] +
+            self.mat[3][0] * self.mat[0][3] * self.mat[2][1] ;
+
+        res.mat[3][1] = self.mat[0][0] * self.mat[2][1] * self.mat[3][2] -
+            self.mat[0][0] * self.mat[2][2] * self.mat[3][1] -
+            self.mat[2][0] * self.mat[0][1] * self.mat[3][2] +
+            self.mat[2][0] * self.mat[0][2] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[0][1] * self.mat[2][2] -
+            self.mat[3][0] * self.mat[0][2] * self.mat[2][1] ;
+
+        res.mat[0][2] = self.mat[0][1] * self.mat[1][2] * self.mat[3][3] -
+            self.mat[0][1] * self.mat[1][3] * self.mat[3][2] -
+            self.mat[1][1] * self.mat[0][2] * self.mat[3][3] +
+            self.mat[1][1] * self.mat[0][3] * self.mat[3][2] +
+            self.mat[3][1] * self.mat[0][2] * self.mat[1][3] -
+            self.mat[3][1] * self.mat[0][3] * self.mat[1][2] ;
+
+        //is there an end to this self.matadness?
+
+        res.mat[1][2] = -self.mat[0][0] * self.mat[1][2] * self.mat[3][3] +
+            self.mat[0][0] * self.mat[1][3] * self.mat[3][2] +
+            self.mat[1][0] * self.mat[0][2] * self.mat[3][3] -
+            self.mat[1][0] * self.mat[0][3] * self.mat[3][2] -
+            self.mat[3][0] * self.mat[0][2] * self.mat[1][3] +
+            self.mat[3][0] * self.mat[0][3] * self.mat[1][2] ;
+
+        res.mat[2][2] = self.mat[0][0] * self.mat[1][1] * self.mat[3][3] -
+            self.mat[0][0] * self.mat[1][3] * self.mat[3][1] -
+            self.mat[1][0] * self.mat[0][1] * self.mat[3][3] +
+            self.mat[1][0] * self.mat[0][3] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[0][1] * self.mat[1][3] -
+            self.mat[3][0] * self.mat[0][3] * self.mat[1][1] ;
+
+        res.mat[3][2] = -self.mat[0][0] * self.mat[1][1] * self.mat[3][2] +
+            self.mat[0][0] * self.mat[1][2] * self.mat[3][1] +
+            self.mat[1][0] * self.mat[0][1] * self.mat[3][2] -
+            self.mat[1][0] * self.mat[0][2] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[0][1] * self.mat[1][2] +
+            self.mat[3][0] * self.mat[0][2] * self.mat[1][1] ;
+
+        //it is horrible
+
+        res.mat[0][3] = -self.mat[0][1] * self.mat[1][2] * self.mat[2][3] +
+            self.mat[0][1] * self.mat[1][3] * self.mat[2][2] +
+            self.mat[1][1] * self.mat[0][2] * self.mat[2][3] -
+            self.mat[1][1] * self.mat[0][3] * self.mat[2][2] -
+            self.mat[2][1] * self.mat[0][2] * self.mat[1][3] +
+            self.mat[2][1] * self.mat[0][3] * self.mat[1][2] ;
+
+        res.mat[1][3] = self.mat[0][0] * self.mat[1][2] * self.mat[2][3] -
+            self.mat[0][0] * self.mat[1][3] * self.mat[2][2] -
+            self.mat[1][0] * self.mat[0][2] * self.mat[2][3] +
+            self.mat[1][0] * self.mat[0][3] * self.mat[2][2] +
+            self.mat[2][0] * self.mat[0][2] * self.mat[1][3] -
+            self.mat[2][0] * self.mat[0][3] * self.mat[1][2] ;
+
+        //I need to last, salvation is near
+
+        res.mat[2][3] = -self.mat[0][0] * self.mat[1][1] * self.mat[2][3] +
+            self.mat[0][0] * self.mat[1][3] * self.mat[2][1] +
+            self.mat[1][0] * self.mat[0][1] * self.mat[2][3] -
+            self.mat[1][0] * self.mat[0][3] * self.mat[2][1] -
+            self.mat[2][0] * self.mat[0][1] * self.mat[1][3] +
+            self.mat[2][0] * self.mat[0][3] * self.mat[1][1] ;
+
+        res.mat[3][3] = self.mat[0][0] * self.mat[1][1] * self.mat[2][2] -
+            self.mat[0][0] * self.mat[1][2] * self.mat[2][1] -
+            self.mat[1][0] * self.mat[0][1] * self.mat[2][2] +
+            self.mat[1][0] * self.mat[0][2] * self.mat[2][1] +
+            self.mat[2][0] * self.mat[0][1] * self.mat[1][2] -
+            self.mat[2][0] * self.mat[0][2] * self.mat[1][1] ;
+
+        //god that was horrible
+
+        let mut det = self.mat[0][0] * res.mat[0][0] + self.mat[0][1] * res.mat[1][0] + self.mat[0][2] * res.mat[2][0] + self.mat[0][3] * res.mat[3][0];
+
+        if det == 0.0 {
+            return res;
+        }
+
+        det = 1.0 / det;
+
+        for i in 0..4{
+            for j in 0..4{
+                res.mat[i][j] = self.mat[i][j] * det;
+            }
+        }
+        res 
+    }
 }
 
 impl Matrix4<f64>{
@@ -764,142 +923,285 @@ impl Matrix4<f64>{
             ],
         }
     }
+
+    pub fn invert(self) -> Self{
+        let mut res = Matrix4::<f64>::new();
+
+        res.mat[0][0] = self.mat[1][1] * self.mat[2][2] * self.mat[3][3] -
+            self.mat[1][1] * self.mat[2][3] * self.mat[3][2] -
+            self.mat[2][1] * self.mat[1][2] * self.mat[3][3] +
+            self.mat[2][1] * self.mat[1][3] * self.mat[3][2] +
+            self.mat[3][1] * self.mat[1][2] * self.mat[2][3] -
+            self.mat[3][1] * self.mat[1][3] * self.mat[2][2] ;
+
+        res.mat[1][0] = -self.mat[1][0] * self.mat[2][2] * self.mat[3][3] +
+            self.mat[1][0] * self.mat[2][3] * self.mat[3][2] +
+            self.mat[2][0] * self.mat[1][2] * self.mat[3][3] -
+            self.mat[2][0] * self.mat[1][3] * self.mat[3][2] -
+            self.mat[3][0] * self.mat[1][2] * self.mat[2][3] +
+            self.mat[3][0] * self.mat[1][3] * self.mat[2][2] ;
+
+        res.mat[2][0] = self.mat[1][0] * self.mat[2][1] * self.mat[3][3] -
+            self.mat[1][0] * self.mat[2][3] * self.mat[3][1] -
+            self.mat[2][0] * self.mat[1][1] * self.mat[3][3] +
+            self.mat[2][0] * self.mat[1][3] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[1][1] * self.mat[2][3] -
+            self.mat[3][0] * self.mat[1][3] * self.mat[2][1] ;
+
+        //Oh self.maty god
+
+        res.mat[3][0] = -self.mat[1][0] * self.mat[2][1] * self.mat[3][2] +
+            self.mat[1][0] * self.mat[2][2] * self.mat[3][1] +
+            self.mat[2][0] * self.mat[1][1] * self.mat[3][2] -
+            self.mat[2][0] * self.mat[1][2] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[1][1] * self.mat[2][2] +
+            self.mat[3][0] * self.mat[1][2] * self.mat[2][1] ;
+
+        res.mat[0][1] = -self.mat[0][1] * self.mat[2][2] * self.mat[3][3] +
+            self.mat[0][1] * self.mat[2][3] * self.mat[3][2] +
+            self.mat[2][1] * self.mat[0][2] * self.mat[3][3] -
+            self.mat[2][1] * self.mat[0][3] * self.mat[3][2] -
+            self.mat[3][1] * self.mat[0][2] * self.mat[2][3] +
+            self.mat[3][1] * self.mat[0][3] * self.mat[2][2] ;
+
+        res.mat[1][1] = self.mat[0][0] * self.mat[2][2] * self.mat[3][3] -
+            self.mat[0][0] * self.mat[2][3] * self.mat[3][2] -
+            self.mat[2][0] * self.mat[0][2] * self.mat[3][3] +
+            self.mat[2][0] * self.mat[0][3] * self.mat[3][2] +
+            self.mat[3][0] * self.mat[0][2] * self.mat[2][3] -
+            self.mat[3][0] * self.mat[0][3] * self.mat[2][2] ;
+
+        //it keeps going on
+
+        res.mat[2][1] = -self.mat[0][0] * self.mat[2][1] * self.mat[3][3] +
+            self.mat[0][0] * self.mat[2][3] * self.mat[3][1] +
+            self.mat[2][0] * self.mat[0][1] * self.mat[3][3] -
+            self.mat[2][0] * self.mat[0][3] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[0][1] * self.mat[2][3] +
+            self.mat[3][0] * self.mat[0][3] * self.mat[2][1] ;
+
+        res.mat[3][1] = self.mat[0][0] * self.mat[2][1] * self.mat[3][2] -
+            self.mat[0][0] * self.mat[2][2] * self.mat[3][1] -
+            self.mat[2][0] * self.mat[0][1] * self.mat[3][2] +
+            self.mat[2][0] * self.mat[0][2] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[0][1] * self.mat[2][2] -
+            self.mat[3][0] * self.mat[0][2] * self.mat[2][1] ;
+
+        res.mat[0][2] = self.mat[0][1] * self.mat[1][2] * self.mat[3][3] -
+            self.mat[0][1] * self.mat[1][3] * self.mat[3][2] -
+            self.mat[1][1] * self.mat[0][2] * self.mat[3][3] +
+            self.mat[1][1] * self.mat[0][3] * self.mat[3][2] +
+            self.mat[3][1] * self.mat[0][2] * self.mat[1][3] -
+            self.mat[3][1] * self.mat[0][3] * self.mat[1][2] ;
+
+        //is there an end to this self.matadness?
+
+        res.mat[1][2] = -self.mat[0][0] * self.mat[1][2] * self.mat[3][3] +
+            self.mat[0][0] * self.mat[1][3] * self.mat[3][2] +
+            self.mat[1][0] * self.mat[0][2] * self.mat[3][3] -
+            self.mat[1][0] * self.mat[0][3] * self.mat[3][2] -
+            self.mat[3][0] * self.mat[0][2] * self.mat[1][3] +
+            self.mat[3][0] * self.mat[0][3] * self.mat[1][2] ;
+
+        res.mat[2][2] = self.mat[0][0] * self.mat[1][1] * self.mat[3][3] -
+            self.mat[0][0] * self.mat[1][3] * self.mat[3][1] -
+            self.mat[1][0] * self.mat[0][1] * self.mat[3][3] +
+            self.mat[1][0] * self.mat[0][3] * self.mat[3][1] +
+            self.mat[3][0] * self.mat[0][1] * self.mat[1][3] -
+            self.mat[3][0] * self.mat[0][3] * self.mat[1][1] ;
+
+        res.mat[3][2] = -self.mat[0][0] * self.mat[1][1] * self.mat[3][2] +
+            self.mat[0][0] * self.mat[1][2] * self.mat[3][1] +
+            self.mat[1][0] * self.mat[0][1] * self.mat[3][2] -
+            self.mat[1][0] * self.mat[0][2] * self.mat[3][1] -
+            self.mat[3][0] * self.mat[0][1] * self.mat[1][2] +
+            self.mat[3][0] * self.mat[0][2] * self.mat[1][1] ;
+
+        //it is horrible
+
+        res.mat[0][3] = -self.mat[0][1] * self.mat[1][2] * self.mat[2][3] +
+            self.mat[0][1] * self.mat[1][3] * self.mat[2][2] +
+            self.mat[1][1] * self.mat[0][2] * self.mat[2][3] -
+            self.mat[1][1] * self.mat[0][3] * self.mat[2][2] -
+            self.mat[2][1] * self.mat[0][2] * self.mat[1][3] +
+            self.mat[2][1] * self.mat[0][3] * self.mat[1][2] ;
+
+        res.mat[1][3] = self.mat[0][0] * self.mat[1][2] * self.mat[2][3] -
+            self.mat[0][0] * self.mat[1][3] * self.mat[2][2] -
+            self.mat[1][0] * self.mat[0][2] * self.mat[2][3] +
+            self.mat[1][0] * self.mat[0][3] * self.mat[2][2] +
+            self.mat[2][0] * self.mat[0][2] * self.mat[1][3] -
+            self.mat[2][0] * self.mat[0][3] * self.mat[1][2] ;
+
+        //I need to last, salvation is near
+
+        res.mat[2][3] = -self.mat[0][0] * self.mat[1][1] * self.mat[2][3] +
+            self.mat[0][0] * self.mat[1][3] * self.mat[2][1] +
+            self.mat[1][0] * self.mat[0][1] * self.mat[2][3] -
+            self.mat[1][0] * self.mat[0][3] * self.mat[2][1] -
+            self.mat[2][0] * self.mat[0][1] * self.mat[1][3] +
+            self.mat[2][0] * self.mat[0][3] * self.mat[1][1] ;
+
+        res.mat[3][3] = self.mat[0][0] * self.mat[1][1] * self.mat[2][2] -
+            self.mat[0][0] * self.mat[1][2] * self.mat[2][1] -
+            self.mat[1][0] * self.mat[0][1] * self.mat[2][2] +
+            self.mat[1][0] * self.mat[0][2] * self.mat[2][1] +
+            self.mat[2][0] * self.mat[0][1] * self.mat[1][2] -
+            self.mat[2][0] * self.mat[0][2] * self.mat[1][1] ;
+
+        //god that was horrible
+
+        let mut det = self.mat[0][0] * res.mat[0][0] + self.mat[0][1] * res.mat[1][0] + self.mat[0][2] * res.mat[2][0] + self.mat[0][3] * res.mat[3][0];
+
+        if det == 0.0 {
+            return res;
+        }
+
+        det = 1.0 / det;
+
+        for i in 0..4{
+            for j in 0..4{
+                res.mat[i][j] = self.mat[i][j] * det;
+            }
+        }
+        res 
+    }
 }
 
 #[derive(Copy,Clone,Debug,PartialEq)]
 pub struct Quat<T>
-    where T: Copy + Clone + Debug + PartialEq{
+where T: Copy + Clone + Debug + PartialEq{
     quat: [T; 4],
 }
 
 impl<T> Quat<T>
-    where T: Copy + Clone + Debug + PartialEq{
-        pub fn from_coords(w: T,x: T,y: T,z: T) -> Self{
-            Quat{
-                quat:[w,x,y,z],
-            }
+where T: Copy + Clone + Debug + PartialEq{
+    pub fn from_coords(w: T,x: T,y: T,z: T) -> Self{
+        Quat{
+            quat:[w,x,y,z],
         }
+    }
 
-        pub fn from_array(array: [T; 4]) -> Self{
-            Quat{
-                quat: array,
-            }
+    pub fn from_array(array: [T; 4]) -> Self{
+        Quat{
+            quat: array,
         }
+    }
 
-        pub fn from_vector(vec: Vector4<T>) -> Self{
-            Quat{
-                quat: vec.vec,
-            }
+    pub fn from_vector(vec: Vector4<T>) -> Self{
+        Quat{
+            quat: vec.vec,
         }
+    }
 }
 
 impl Quat<f32>{
-        pub fn new() -> Self{
-            Quat{
-                quat: [0.0,0.0,0.0,1.0],
-            }
+    pub fn new() -> Self{
+        Quat{
+            quat: [0.0,0.0,0.0,1.0],
         }
+    }
 
-        pub fn from_angle(axis: Vector3<f32>, angle: f32) -> Self{
-            let angle_2 = angle/2.0;
-            let sin = angle_2.sin();
+    pub fn from_angle(axis: Vector3<f32>, angle: f32) -> Self{
+        let angle_2 = angle/2.0;
+        let sin = angle_2.sin();
 
-            Quat{
-                quat: [axis.vec[0] * sin,
-                    axis.vec[1] * sin,
-                    axis.vec[2] * sin,
-                    angle_2.cos()],
-            }
+        Quat{
+            quat: [axis.vec[0] * sin,
+            axis.vec[1] * sin,
+            axis.vec[2] * sin,
+            angle_2.cos()],
         }
+    }
 
-        pub fn to_matrix(self) -> Matrix4<f32>{
-            let forward = Vector3::<f32>::from_array([
-                                                   2.0 * (self.quat[1] * self.quat[3] - self.quat[0] * self.quat[2]),
-                                                   2.0 * (self.quat[2] * self.quat[3] + self.quat[0] * self.quat[1]),
-                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[2] * self.quat[2])
-            ]);
-            let up = Vector3::<f32>::from_array([
-                                                   2.0 * (self.quat[1] * self.quat[2] + self.quat[0] * self.quat[3]),
-                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[3] * self.quat[3]),
-                                                   2.0 * (self.quat[2] * self.quat[3] - self.quat[0] * self.quat[1])
-            ]);
-            let right = Vector3::<f32>::from_array([
-                                                   1.0 - 2.0 * (self.quat[2] * self.quat[2] + self.quat[3] * self.quat[3]),
-                                                   2.0 * (self.quat[1] * self.quat[2] - self.quat[0] * self.quat[3]),
-                                                   2.0 * (self.quat[1] * self.quat[3] + self.quat[0] * self.quat[2])
-            ]);
-            Matrix4::<f32>::as_rotation_full(forward,up,right)
-        }
+    pub fn to_matrix(self) -> Matrix4<f32>{
+        let forward = Vector3::<f32>::from_array([
+                                                 2.0 * (self.quat[1] * self.quat[0] - self.quat[3] * self.quat[2]),
+                                                 2.0 * (self.quat[2] * self.quat[0] + self.quat[3] * self.quat[1]),
+                                                 1.0 - 2.0 * (self.quat[1] * self.quat[1] - self.quat[2] * self.quat[2])
+        ]);
+        let up = Vector3::<f32>::from_array([
+                                            2.0 * (self.quat[1] * self.quat[2] + self.quat[3] * self.quat[0]),
+                                            1.0 - 2.0 * (self.quat[1] * self.quat[1] - self.quat[0] * self.quat[0]),
+                                            2.0 * (self.quat[2] * self.quat[0] - self.quat[3] * self.quat[1])
+        ]);
+        let right = Vector3::<f32>::from_array([
+                                               1.0 - 2.0 * (self.quat[2] * self.quat[2] - self.quat[0] * self.quat[0]),
+                                               2.0 * (self.quat[1] * self.quat[2] - self.quat[3] * self.quat[0]),
+                                               2.0 * (self.quat[1] * self.quat[0] + self.quat[3] * self.quat[2])
+        ]);
+        Matrix4::<f32>::as_rotation_full(forward,up,right)
+    }
 
 }
 
 impl Quat<f64>{
-        pub fn new() -> Self{
-            Quat{
-                quat: [0.0,0.0,0.0,1.0],
-            }
+    pub fn new() -> Self{
+        Quat{
+            quat: [0.0,0.0,0.0,1.0],
         }
+    }
 
-        pub fn from_angle(axis: Vector3<f64>, angle: f64) -> Self{
-            let angle_2 = angle/2.0;
-            let sin = angle_2.sin();
+    pub fn from_angle(axis: Vector3<f64>, angle: f64) -> Self{
+        let angle_2 = angle/2.0;
+        let sin = angle_2.sin();
 
-            Quat{
-                quat: [axis.vec[0] * sin,
-                    axis.vec[1] * sin,
-                    axis.vec[2] * sin,
-                    angle_2.cos()],
-            }
+        Quat{
+            quat: [axis.vec[0] * sin,
+            axis.vec[1] * sin,
+            axis.vec[2] * sin,
+            angle_2.cos()],
         }
+    }
 
-        pub fn to_matrix(self) -> Matrix4<f64>{
-            let forward = Vector3::<f64>::from_array([
-                                                   2.0 * (self.quat[1] * self.quat[3] - self.quat[0] * self.quat[2]),
-                                                   2.0 * (self.quat[2] * self.quat[3] + self.quat[0] * self.quat[1]),
-                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[2] * self.quat[2])
-            ]);
-            let up = Vector3::<f64>::from_array([
-                                                   2.0 * (self.quat[1] * self.quat[2] + self.quat[0] * self.quat[3]),
-                                                   1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[3] * self.quat[3]),
-                                                   2.0 * (self.quat[2] * self.quat[3] - self.quat[0] * self.quat[1])
-            ]);
-            let right = Vector3::<f64>::from_array([
-                                                   1.0 - 2.0 * (self.quat[2] * self.quat[2] + self.quat[3] * self.quat[3]),
-                                                   2.0 * (self.quat[1] * self.quat[2] - self.quat[0] * self.quat[3]),
-                                                   2.0 * (self.quat[1] * self.quat[3] + self.quat[0] * self.quat[2])
-            ]);
-            Matrix4::<f64>::as_rotation_full(forward,up,right)
-        }
+    pub fn to_matrix(self) -> Matrix4<f64>{
+        let forward = Vector3::<f64>::from_array([
+                                                 2.0 * (self.quat[1] * self.quat[3] - self.quat[0] * self.quat[2]),
+                                                 2.0 * (self.quat[2] * self.quat[3] + self.quat[0] * self.quat[1]),
+                                                 1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[2] * self.quat[2])
+        ]);
+        let up = Vector3::<f64>::from_array([
+                                            2.0 * (self.quat[1] * self.quat[2] + self.quat[0] * self.quat[3]),
+                                            1.0 - 2.0 * (self.quat[1] * self.quat[1] + self.quat[3] * self.quat[3]),
+                                            2.0 * (self.quat[2] * self.quat[3] - self.quat[0] * self.quat[1])
+        ]);
+        let right = Vector3::<f64>::from_array([
+                                               1.0 - 2.0 * (self.quat[2] * self.quat[2] + self.quat[3] * self.quat[3]),
+                                               2.0 * (self.quat[1] * self.quat[2] - self.quat[0] * self.quat[3]),
+                                               2.0 * (self.quat[1] * self.quat[3] + self.quat[0] * self.quat[2])
+        ]);
+        Matrix4::<f64>::as_rotation_full(forward,up,right)
+    }
 }
 
 impl<T> Mul for Quat<T>
-    where T: Mul<Output=T> + Sub<Output=T> + Add<Output=T> + Copy + Debug + PartialEq{
-        type Output = Self;
-        fn mul(self,other: Quat<T>) -> Self{
-            Quat{
-                quat: [
-                    self.quat[0] * other.quat[0] - self.quat[1] * other.quat[1] - self.quat[2] * other.quat[2] - self.quat[3] * other.quat[2],
-                    self.quat[1] * other.quat[0] + self.quat[0] * other.quat[1] + self.quat[2] * other.quat[3] - self.quat[3] * other.quat[2],
-                    self.quat[2] * other.quat[0] + self.quat[0] * other.quat[2] + self.quat[3] * other.quat[1] - self.quat[1] * other.quat[3],
-                    self.quat[3] * other.quat[0] + self.quat[0] * other.quat[3] + self.quat[1] * other.quat[2] - self.quat[2] * other.quat[1]
-                ],
-            }
+where T: Mul<Output=T> + Sub<Output=T> + Add<Output=T> + Copy + Debug + PartialEq{
+    type Output = Self;
+    fn mul(self,other: Quat<T>) -> Self{
+        Quat{
+            quat: [
+                self.quat[0] * other.quat[0] - self.quat[1] * other.quat[1] - self.quat[2] * other.quat[2] - self.quat[3] * other.quat[2],
+                self.quat[1] * other.quat[0] + self.quat[0] * other.quat[1] + self.quat[2] * other.quat[3] - self.quat[3] * other.quat[2],
+                self.quat[2] * other.quat[0] + self.quat[0] * other.quat[2] + self.quat[3] * other.quat[1] - self.quat[1] * other.quat[3],
+                self.quat[3] * other.quat[0] + self.quat[0] * other.quat[3] + self.quat[1] * other.quat[2] - self.quat[2] * other.quat[1]
+            ],
         }
+    }
 }
 
 impl<T> Mul<Vector3<T>> for Quat<T>
-    where T: Mul<Output=T> + Sub<Output=T> + Add<Output=T> + Copy + Debug + PartialEq{
-        type Output = Self;
-        fn mul(self,other: Vector3<T>) -> Self{
-            Quat{
-                quat: [
-                    self.quat[1] * other.vec[0] - self.quat[2] * other.vec[1] - self.quat[3] * other.vec[2],
-                    self.quat[0] * other.vec[0] + self.quat[2] * other.vec[2] - self.quat[3] * other.vec[1],
-                    self.quat[0] * other.vec[1] + self.quat[3] * other.vec[0] - self.quat[1] * other.vec[2],
-                    self.quat[0] * other.vec[2] + self.quat[1] * other.vec[1] - self.quat[2] * other.vec[0]
-                ],
-            }
+where T: Mul<Output=T> + Sub<Output=T> + Add<Output=T> + Copy + Debug + PartialEq{
+    type Output = Self;
+    fn mul(self,other: Vector3<T>) -> Self{
+        Quat{
+            quat: [
+                self.quat[1] * other.vec[0] - self.quat[2] * other.vec[1] - self.quat[3] * other.vec[2],
+                self.quat[0] * other.vec[0] + self.quat[2] * other.vec[2] - self.quat[3] * other.vec[1],
+                self.quat[0] * other.vec[1] + self.quat[3] * other.vec[0] - self.quat[1] * other.vec[2],
+                self.quat[0] * other.vec[2] + self.quat[1] * other.vec[1] - self.quat[2] * other.vec[0]
+            ],
         }
+    }
 }
 
 #[cfg(test)]
@@ -922,17 +1224,17 @@ mod test{
         assert!(Vector2f::from_array([5.4,5.6]) == add);
 
         let mat  = Matrix4::from_array([
-                       [3.0,2.0,5.0,7.0],
-                       [6.0,7.0,4.0,3.0],
-                       [9.0,5.0,3.0,5.0],
-                       [9.0,5.0,3.0,5.0]
+                                       [3.0,2.0,5.0,7.0],
+                                       [6.0,7.0,4.0,3.0],
+                                       [9.0,5.0,3.0,5.0],
+                                       [9.0,5.0,3.0,5.0]
         ]);
 
         let mat2 = Matrix4::from_array([
-                       [1.0,2.0,3.0,5.0],
-                       [5.0,3.0,6.0,5.0],
-                       [2.0,4.0,7.0,2.0],
-                       [9.0,5.0,7.0,1.0]
+                                       [1.0,2.0,3.0,5.0],
+                                       [5.0,3.0,6.0,5.0],
+                                       [2.0,4.0,7.0,2.0],
+                                       [9.0,5.0,7.0,1.0]
         ]);
 
         let matmul = mat * mat2;
@@ -940,10 +1242,10 @@ mod test{
         println!("{:?}",mat2);
         println!("{:?}",matmul);
         assert!(Matrix4::from_array([
-                                   [87.0,56.0,37.0,53.0],
-                                   [132.0,86.0,70.0,99.0],
-                                   [111.0,77.0,53.0,71.0],
-                                   [129.0,93.0,89.0,118.0]
+                                    [87.0,56.0,37.0,53.0],
+                                    [132.0,86.0,70.0,99.0],
+                                    [111.0,77.0,53.0,71.0],
+                                    [129.0,93.0,89.0,118.0]
         ]) == matmul);
     }
 
