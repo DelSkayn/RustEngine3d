@@ -56,11 +56,12 @@ impl Engine{
 
         let ren_obj = RenderObject{
             mesh: &mesh,
-            transform: Matrix4f::as_translation(Vector3f::from_coords(0.0,0.0,-10.0)),
+            transform: Matrix4f::as_translation(Vector3f::from_coords(0.0,0.1,10.5)),
         };
 
-        let mut cam = Camera::with_perspective(90.0,800.0/800.0,1.0,10000.0);
-        cam.look_at(Vector3f::from_coords(0.0,0.0,-10.0));
+        let mut cam = Camera::with_perspective(90.0,800.0/800.0,0.1,10000.0);
+//        let mut cam = Camera::new();
+//        cam.look_at(Vector3f::from_coords(0.0,0.0,-10.0));
         
         let que = RenderQueue{
             queue: vec![ren_obj],

@@ -667,7 +667,7 @@ impl Matrix4<f32>{
             mat: [
                 [1.0/(tan_half_fov * aspect_ratio), 0.0, 0.0,0.0],
                 [0.0,1.0/tan_half_fov,0.0,0.0],
-                [0.0,0.0,(-z_near - z_far)/z_range,-1.0],
+                [0.0,0.0,(z_near + z_far)/z_range,-1.0],
                 [0.0,0.0,2.0*-z_far*z_near/z_range,0.0]
             ]
         }
@@ -678,7 +678,6 @@ impl Matrix4<f32>{
         res.mat[3][1] = trans.vec[0];
         res.mat[3][2] = trans.vec[1];
         res.mat[3][3] = trans.vec[2];
-        println!("AAAA");
         res
     }
 

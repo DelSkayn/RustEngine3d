@@ -1,5 +1,6 @@
 
 use super::glium::*;
+//use super::glium::draw_parameters::PolygonMode;
 
 use std::rc::Rc;
 
@@ -37,7 +38,7 @@ static VS_SRC:&'static str = & r#"
 in vec3 position;
 in vec3 normal;
 
-uniform mat4 _ModelTranform;
+uniform mat4 _ModelTransform;
 uniform mat4 _CamTransform;
 uniform mat4 _PerspectiveTransform;
 
@@ -48,9 +49,10 @@ out VS_OUT{
 void main(){
     vs_out.color = normal;
 
-    gl_Position = _PerspectiveTransform * 
-        _CamTransform *
-        _ModelTranform * vec4(position,1.0);
+    vec4 p = vec4(position,1.0);
+    mat4 trans = _ModelTransform * _CamTransform * _ModelTransform;
+
+    gl_Position = p;
 }
 
 "#;
@@ -65,7 +67,7 @@ in VS_OUT{
 out vec4 color;
 
 void main(){
-    color = vec4(1.0,1.0,1.0,1.0);
+    color = vec4(fs_in.color+0.1,1.0);
 }
 "#;
 
@@ -141,17 +143,22 @@ impl RenderEngine{
     pub fn render<'a>(&'a self,renderque: RenderQueue<'a>){
         let mut target = self.window.get_display().draw();
 
+        let draw_param = DrawParameters{
+            polygon_mode: PolygonMode::Line,
+            .. Default::default()
+        };
+
 
         for obj in renderque.queue{
-        debug!("Model: {:?}",renderque.cam.get_view());
+        //debug!("Model: {:?}",renderque.cam.get_view());
         let uniform = uniform!{
             _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
             _CamTransform: renderque.cam.get_view().as_array(),
-            _ModelTranform: obj.transform.as_array(),
+            _ModelTransform: obj.transform.as_array(),
         };
             target.draw(&obj.mesh.vertex,&obj.mesh.index
                         ,&self.shader,&uniform
-                        ,&Default::default()).unwrap();
+                        ,&draw_param).unwrap();
             
         }
         target.finish().unwrap();
