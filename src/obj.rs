@@ -23,9 +23,7 @@ impl ObjLoader{
         }
     }
     
-    pub fn load(self) -> Result<mesh::Mesh<u16>,ObjError>{
-        let mut vertecies_found = 0;
-        let mut normals_found = 0;
+    pub fn load(self) -> Result<mesh::Mesh,ObjError>{
         let mut format = IndexFormat::NotTested;
         let mut vertecies = Vec::new();
         let mut normals = Vec::new();
@@ -37,8 +35,7 @@ impl ObjLoader{
         while let Some(word) = iter.next(){
             match word{
                 "v" => {
-                    debug!("Found vertex");
-                    vertecies_found  += 1;
+                    trace!("Found vertex");
                     let mut value = [0.0; 3];
 
                     let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
@@ -53,8 +50,7 @@ impl ObjLoader{
                     vertecies.push(value);
                 }
                 "vn" => {
-                    debug!("Found normal");
-                    normals_found  += 1;
+                    trace!("Found normal");
                     let mut value = [0.0; 3];
 
                     let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
@@ -67,9 +63,10 @@ impl ObjLoader{
                     value[2] = try!(normal_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse normal"))));
 
                     normals.push(value);
+
                 }
                 "f" => {
-                    debug!("Found index");
+                    trace!("Found index");
                     if format == IndexFormat::NotTested{
                         let test_word = try!(iter.peek().ok_or(ObjError::InvalidFormat("could not get index"))).clone();
                         let format_split: Vec<&str> = test_word.split("/").collect();
@@ -83,7 +80,7 @@ impl ObjLoader{
                                 format = IndexFormat::VTN;
                             }
                         }
-                        debug!("Found index format {:?}",format);
+                        trace!("Found index format {:?}",format);
                     }
                     match format{
                         IndexFormat::Normal => {
@@ -121,12 +118,14 @@ impl ObjLoader{
                 }
             }
         }
+        info!("Found vertecies: {}, normals: {}, indecies: {}",vertecies.len(),normals.len(),0);
 
         //place normals in proper place
         if format == IndexFormat::VTN || format == IndexFormat::VNullN {
-            let mut old = normals;
+            let old = normals;
             normals = Vec::with_capacity(vertecies.len());
             unsafe{
+                //faster than pushing vertecies.len() times
                 normals.set_len(vertecies.len());
             }
             for i in 0..vertecies.len(){
@@ -147,7 +146,6 @@ impl ObjLoader{
         }
         */
 
-        info!("Found vertecies: {}, normals: {}, indecies: {}",vertecies.len(),normals.len(),0);
         let mut vertex_res = Vec::with_capacity(vertecies.len());
         for i in 0..vertecies.len(){
             vertex_res.push(mesh::MeshVertex{

@@ -11,3 +11,9 @@ cgmath = "*"
 time = "0.1"
 num_cpus = "0.2"
 
+[profile.dev]
+opt-level = 0
+debug = true
+rpath = false
+lto = false
+debug-assertions = true

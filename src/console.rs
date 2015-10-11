@@ -9,8 +9,15 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use super::time;
 use std::thread;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
+use std::sync::mpsc::TryRecvError;
 use std::io;
+use std::fs::File;
+use std::io::Write;
 use std::collections::HashMap;
+use std::ops::Drop;
 
 use std::mem;
 
@@ -29,29 +36,36 @@ pub type LogLevelContainer<T> = Arc<Mutex<Cell<T>>>;
 // 
 // Today i learned a great lesson READ TO DOCS BEFORE YOU IMPLEMENT SOMETHING
 //
-struct ConsoleLogger;
+struct ConsoleLogger{
+    log_channel: Mutex<Sender<String>>,
+}
+
 
 
 impl ConsoleLogger{
-    fn init() -> Result<(), SetLoggerError>{
+    fn init() -> Result<Receiver<String>, SetLoggerError>{
+        let (send,recv) = channel::<String>();
         log::set_logger(move |max_log_level| {
-            max_log_level.set(LogLevelFilter::Info);
-            Box::new(ConsoleLogger)
-        })
+            max_log_level.set(LogLevelFilter::Debug);
+            Box::new(ConsoleLogger{
+                log_channel: Mutex::new(send),
+            })
+        }).map(|_| recv)
     }
 }
 
 impl log::Log for ConsoleLogger{
     fn enabled(&self, metadata: &LogMetadata) -> bool{
-        metadata.level() <= LogLevel::Info
+        metadata.level() <= LogLevel::Debug
     }
 
     fn log(&self, record: &LogRecord){
         if self.enabled(record.metadata()){
-            println!("[{}][{}]{}"
-                     ,time::now().strftime("T").unwrap()
+            let res = format!("[{}][{}]{}"
+                     ,time::now().strftime("%T").unwrap()
                      ,record.level()
                      ,record.args());
+            self.log_channel.lock().unwrap().send(res).unwrap();
         }
     }
 }
@@ -110,6 +124,9 @@ pub struct Console<T = BaseEvent>{
     input: RefCell<ConsoleInput>,
     commands: HashMap<&'static str,Box<ConsoleCommand<T>>>,
     events: RefCell<Vec<T>>,
+    log_channel: Receiver<String>,
+    enable_logging: Cell<bool>,
+    log_file: RefCell<File>,
 }
 
 
@@ -117,8 +134,11 @@ impl<T> Console<T>{
     pub fn new() -> Self{
         let mut input = ConsoleInput::new();
         input.run();
-        ConsoleLogger::init().unwrap();
+        let recv = ConsoleLogger::init().unwrap();
         let mut commands = HashMap::<&'static str,Box<ConsoleCommand<T>>>::new();
+        let file = File::create("log.txt").unwrap();
+
+
         commands.insert("echo",Box::new(
             |args:&[&str]|{
                 print!("[echo]");
@@ -129,10 +149,14 @@ impl<T> Console<T>{
                 None
             }));
         commands.insert("null",Box::new(|args|(None)));
+
         Console{
             input: RefCell::new(input),
             commands: commands,
             events: RefCell::new(Vec::new()),
+            log_channel: recv,
+            enable_logging: Cell::new(true),
+            log_file: RefCell::new(file),
         }
     }
 
@@ -142,10 +166,29 @@ impl<T> Console<T>{
         unimplemented!();
     }
 
+    fn handel_logging(&self){
+        loop{
+            match self.log_channel.try_recv() {
+                Ok(x) => {
+                    println!("{}",x);
+                    write!(self.log_file.borrow_mut(),"{}\n",x).unwrap();
+                }
+                Err(x) => match x{
+                    TryRecvError::Empty => break,
+                    TryRecvError::Disconnected => println!("Error, logging channel disconnected!"),
+                }
+            }
+        }
+    }
+
     //gets input and executes commands
     //There is one hardcoded command
     //namely 'commands' wich returns all existing commands
     pub fn update(&self){
+        if self.enable_logging.get(){
+            self.handel_logging();
+        }
+
         let mut events = self.events.borrow_mut();
         for e in self.input.borrow_mut().get_message(){
             let mut split = e.split_whitespace();
@@ -157,6 +200,12 @@ impl<T> Console<T>{
                 for (command,_) in &self.commands{
                     println!("[commands] {}", command);
                 }
+                println!("[commands] commands");
+                println!("[commands] log");
+                continue;
+            }
+            if name == "log"{
+                self.enable_logging.set(!self.enable_logging.get());
                 continue;
             }
             match self.commands.get(name) {
@@ -195,3 +244,9 @@ impl<T> EventCreator<T> for Console<T>{
     }
 }
 
+impl<T> Drop for Console<T>{
+    fn drop(&mut self){
+        //log pending messages
+        self.update();
+    }
+}

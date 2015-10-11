@@ -33,6 +33,10 @@ impl Window{
         }
     }
 
+    pub fn get_display<'a>(&'a self) -> &'a GlutinFacade{
+        &self.window
+    }
+
     fn match_button(ev: MouseButton) -> Button{
     use super::event::Button::*;
         match ev{
