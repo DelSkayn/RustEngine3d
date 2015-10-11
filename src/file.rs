@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 use std::fs::File;
 use std::fs::Path;
 use std::io::Error;
@@ -32,8 +31,6 @@ impl FileSystem{
         }else{
         }
     }
-=======
 
 struct FileManager{
->>>>>>> render
 }
