@@ -18,6 +18,12 @@ pub mod obj;
 pub mod camera;
 pub mod render;
 
+pub trait Game{
+    fn new(&render::RenderEngine) -> Self;
+    fn render<'a>(&'a mut self,render::RenderQueue<'a>) -> render::RenderQueue<'a>;
+    fn update(&mut self);
+}
+
 
 trait System{
     fn get_id() -> &'static str;

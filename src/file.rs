@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::fs::Path;
 use std::io::Error;
+use std::fs::read_dir;
 
 #[derive(Debug)]
 struct FileFolder{
@@ -11,6 +12,7 @@ struct FileFolder{
 
 struct FileSystem{
     pub root: FileFolder,
+    pub root_path: Path,
 }
 
 enum FileSystemError{
@@ -28,9 +30,10 @@ impl FileSystem{
     fn new(path: Path) -> Result<Self,FileSystemError>{
         if !try!(path.metadata()).is_dir(){
             return Err(FileSystemError::RootDirNotAFolder);
-        }else{
+        }
+        let files = try!(read_dir(path));
+        for entry in files{
         }
     }
-
-struct FileManager{
 }
+

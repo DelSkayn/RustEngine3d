@@ -61,11 +61,16 @@ impl log::Log for ConsoleLogger{
 
     fn log(&self, record: &LogRecord){
         if self.enabled(record.metadata()){
-            let res = format!("[{}][{}]{}"
-                     ,time::now().strftime("%T").unwrap()
-                     ,record.level()
-                     ,record.args());
-            self.log_channel.lock().unwrap().send(res).unwrap();
+            //trace log is not the usefull if it isnt immedeitly printed
+            if record.metadata().level() == LogLevel::Trace {
+                println!("[{}]{}",record.level(),record.args());
+            }else{
+                let res = format!("[{}][{}]{}"
+                         ,time::now().strftime("%T").unwrap()
+                         ,record.level()
+                         ,record.args());
+                self.log_channel.lock().unwrap().send(res).unwrap();
+            }
         }
     }
 }

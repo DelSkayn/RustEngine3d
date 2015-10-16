@@ -5,27 +5,24 @@ use super::event::KeyBoard;
 use super::event::Key;
 use super::window;
 use super::render::RenderEngine;
-use super::render::RenderObject;
 use super::render::RenderQueue;
-use super::obj::ObjLoader; 
-use super::math::Matrix4f;
-use super::math::Vector3f;
 use super::camera::Camera;
-
-use std::fs::File;
-use std::io::BufReader;
-use std::io::Read;
+use super::Game;
 
 use std::rc::Rc;
-pub struct Engine{
+pub struct Engine<T: Game>{
     console: Rc<console::Console>,
     window: Rc<window::Window>,
     event_loop: event::EventLoop<BaseEvent>,
+    renderengine: RenderEngine,
     running: bool,
+    game: T,
 }
 
-impl Engine{
+impl<T: Game> Engine<T>{
     pub fn new() -> Self{
+        println!("Engine starting!");
+        trace!("Engine Startup.");
         let mut cons = console::Console::new();
         cons.add_command("quit",|_| Some(BaseEvent::Quit));
 
@@ -34,42 +31,31 @@ impl Engine{
         let mut e_loop = event::EventLoop::<BaseEvent>::new();
         e_loop.register(rc_cons.clone());
 
+        trace!("Window Creation.");
         let win = Rc::new(window::Window::new());
         e_loop.register(win.clone());
+        trace!("Game setup.");
+
+        trace!("Finising engine startup.");
+        let renderengine = RenderEngine::new(win.clone());
         Engine{
             console: rc_cons,
             window: win,
             event_loop: e_loop,
             running: true,
+            game: T::new(&renderengine),
+            renderengine: renderengine,
         }
     }
     pub fn run(&mut self){
-        let renderengine = RenderEngine::new(self.window.clone());
+        trace!("Start running engine.");
 
-        let mut src = String::new();
-        BufReader::new(
-            File::open("res/teapot.obj").unwrap()
-        ).read_to_string(&mut src).unwrap();
-        let mesh = renderengine.create_mesh(
-            &ObjLoader::new(src).load().unwrap()
-            ).unwrap();
-
-        let ren_obj = RenderObject{
-            mesh: &mesh,
-            transform: Matrix4f::as_translation(Vector3f::from_coords(0.0,0.0,-1.0)),
-        };
-
-        let mut cam = Camera::with_perspective(90.0,800.0/600.0,0.1,10000.0);
-//        let mut cam = Camera::new();
-        cam.look_at(Vector3f::from_coords(0.0,0.0,10.0));
         
-        let que = RenderQueue{
-            queue: vec![ren_obj],
-            cam: cam,
-        };
-
+        trace!("Start game loop.");
         while self.running{
+            trace!("Start game itteration.");
             self.event_loop.pull_events();
+            trace!("Start handeling events.");
             for &event in self.event_loop.get_events(){
                 trace!("Events: {:?}",event);
                 match event{
@@ -78,8 +64,20 @@ impl Engine{
                     _ => (),
                 }
             }
+
+            self.game.update();
+
+            let que = RenderQueue{
+                queue: vec![],
+                cam: Camera::new(),
+            };
+
+            
+
+            trace!("End handeling events.");
                 
-            renderengine.render(que.clone());
+            self.renderengine.render(self.game.render(que));
+            trace!("End game itteration.");
         }
         info!("Quiting engine!");
     }

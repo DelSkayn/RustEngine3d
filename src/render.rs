@@ -133,6 +133,7 @@ pub struct RenderEngine{
 
 impl RenderEngine{
     pub fn new(window: Rc<Window>) -> Self{
+        trace!("RenderEngine Creation.");
         RenderEngine{
             shader: Program::from_source(window.get_display(),&VS_SRC,&FS_SRC,None).unwrap(),
             window: window,    
@@ -140,6 +141,7 @@ impl RenderEngine{
     }
 
     pub fn render<'a>(&'a self,renderque: RenderQueue<'a>){
+        trace!("Start rendering frame.");
         let mut target = self.window.get_display().draw();
 
         for obj in renderque.queue{
@@ -154,6 +156,7 @@ impl RenderEngine{
             
         }
         target.finish().unwrap();
+        trace!("End rendering frame.");
     }
 
     pub fn create_mesh(&self,mesh: &Mesh) -> Result<RenderMesh,BufferError>{
