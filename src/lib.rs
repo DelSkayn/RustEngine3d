@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
+
 #[macro_use]
 extern crate glium;
-extern crate cgmath;
+//extern crate cgmath;
 #[macro_use]
 extern crate log;
 extern crate image;
@@ -13,10 +14,9 @@ pub mod event;
 pub mod window;
 pub mod engine;
 pub mod math;
-pub mod mesh;
 pub mod obj;
-pub mod camera;
 pub mod render;
+pub mod thread_pool;
 
 pub trait Game{
     fn new(&render::RenderEngine) -> Self;

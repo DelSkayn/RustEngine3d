@@ -4,7 +4,6 @@ use log::{LogRecord, LogMetadata,SetLoggerError,LogLevelFilter};
 use log::LogLevel::*;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::sync::atomic::AtomicBool; use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use super::time;
@@ -62,15 +61,13 @@ impl log::Log for ConsoleLogger{
     fn log(&self, record: &LogRecord){
         if self.enabled(record.metadata()){
             //trace log is not the usefull if it isnt immedeitly printed
-            if record.metadata().level() == LogLevel::Trace {
-                println!("[{}]{}",record.level(),record.args());
-            }else{
-                let res = format!("[{}][{}]{}"
-                         ,time::now().strftime("%T").unwrap()
-                         ,record.level()
-                         ,record.args());
-                self.log_channel.lock().unwrap().send(res).unwrap();
-            }
+            println!("[{}]{}",record.level(),record.args());
+            let res = format!("[{}][{}]{}"
+                              ,time::now().strftime("%T").unwrap()
+                              ,record.level()
+                              ,record.args());
+            self.log_channel.lock().unwrap().send(res).unwrap();
+
         }
     }
 }
@@ -81,43 +78,30 @@ impl log::Log for ConsoleLogger{
 //Handels all input via console does so on a seperate thread
 //so that the game can run while waiting for input on stdin
 struct ConsoleInput{
-    commands: Arc<Mutex<Vec<String>>>,
-    reading: Arc<AtomicBool>, 
+    input_channel: Sender<String>,
 }
 
 impl ConsoleInput{
-    fn new() -> Self{
-        ConsoleInput{
-            commands: Arc::new(Mutex::new(Vec::new())),
-            reading: Arc::new(AtomicBool::new(false)),
-        }
+    fn new() -> Receiver<String>{
+        let (send,recv) = channel::<String>();
+        Self::run(send);
+        recv
     }
 
     //
     //Creates the reading thread and starts its work
     //
-    fn run(&mut self){
-        self.reading.store(true,Ordering::Relaxed);
-        let reading = self.reading.clone();
-        let commands = self.commands.clone();
+    fn run(send: Sender<String>){
         thread::spawn(move ||{
             let io_in = io::stdin();
-            while reading.load(Ordering::Relaxed) {
+            loop {
                 let mut input = String::new();
                 io_in.read_line(&mut input).unwrap();
-                commands.lock().unwrap().push(input);
+                send.send(input).unwrap();
             }
         });
     }
-    
-    //
-    //returns the accumelated messages.
-    fn get_message(&mut self) -> Vec<String>{
-        let mut lock = self.commands.lock().unwrap();
-        let res = lock.clone();
-        lock.clear();
-        res
-    }
+
 }
 
 type ConsoleCommand<T> = Fn(&[&str]) -> Option<T>;
@@ -126,10 +110,10 @@ type ConsoleCommand<T> = Fn(&[&str]) -> Option<T>;
 //Struct handeling both the input and output and the
 //execution of commands from the console
 pub struct Console<T = BaseEvent>{
-    input: RefCell<ConsoleInput>,
     commands: HashMap<&'static str,Box<ConsoleCommand<T>>>,
     events: RefCell<Vec<T>>,
     log_channel: Receiver<String>,
+    input_channel: Receiver<String>,
     enable_logging: Cell<bool>,
     log_file: RefCell<File>,
 }
@@ -137,31 +121,30 @@ pub struct Console<T = BaseEvent>{
 
 impl<T> Console<T>{
     pub fn new() -> Self{
-        let mut input = ConsoleInput::new();
-        input.run();
+        let recv_in = ConsoleInput::new();
         let recv = ConsoleLogger::init().unwrap();
         let mut commands = HashMap::<&'static str,Box<ConsoleCommand<T>>>::new();
         let file = File::create("log.txt").unwrap();
 
 
         commands.insert("echo",Box::new(
-            |args:&[&str]|{
-                print!("[echo]");
-                for e in args {
-                    print!("{}",e);
-                }
-                println!("");
-                None
-            }));
+                |args:&[&str]|{
+                    print!("[echo]");
+                    for e in args {
+                        print!("{}",e);
+                    }
+                    println!("");
+                    None
+                }));
         commands.insert("null",Box::new(|args|(None)));
 
         Console{
-            input: RefCell::new(input),
             commands: commands,
             events: RefCell::new(Vec::new()),
             log_channel: recv,
             enable_logging: Cell::new(true),
             log_file: RefCell::new(file),
+            input_channel: recv_in,
         }
     }
 
@@ -175,7 +158,6 @@ impl<T> Console<T>{
         loop{
             match self.log_channel.try_recv() {
                 Ok(x) => {
-                    println!("{}",x);
                     write!(self.log_file.borrow_mut(),"{}\n",x).unwrap();
                 }
                 Err(x) => match x{
@@ -195,7 +177,7 @@ impl<T> Console<T>{
         }
 
         let mut events = self.events.borrow_mut();
-        for e in self.input.borrow_mut().get_message(){
+        while let Ok(e) = self.input_channel.try_recv(){
             let mut split = e.split_whitespace();
             let name = match split.next(){
                 None => continue,
@@ -211,20 +193,20 @@ impl<T> Console<T>{
             }
             if name == "log"{
                 self.enable_logging.set(!self.enable_logging.get());
+            continue;
+        }
+        match self.commands.get(name) {
+            None => {
+                println!("Command {} not regonized",name);
                 continue;
-            }
-            match self.commands.get(name) {
-                None => {
-                    println!("Command {} not regonized",name);
-                    continue;
-                },
-                Some(x) => {
-                    let args: Vec<_> = split.collect();
-                    if let Some(x) = x(&args){
-                        events.push(x);
-                    }
+            },
+            Some(x) => {
+                let args: Vec<_> = split.collect();
+                if let Some(x) = x(&args){
+                    events.push(x);
                 }
-            };
+            }
+        };
         }
     }
 
@@ -239,7 +221,7 @@ impl<T> Console<T>{
     pub fn add_command<F>(&mut self,name: &'static str,func: F)
         where F: Fn(&[&str]) -> Option<T>, F: 'static{
             self.commands.insert(name,Box::new(func));
-    }
+        }
 }
 
 impl<T> EventCreator<T> for Console<T>{

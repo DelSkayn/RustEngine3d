@@ -1,13 +1,28 @@
-use super::glium::*;
+use super::glium::{
+    VertexBuffer,
+    IndexBuffer,
+    Program,
+    buffer,
+    index,
+    vertex,
+    program,
+};
+
 //use super::glium::draw_parameters::PolygonMode;
 
-use std::rc::Rc;
 
-use super::window::Window;
-use super::mesh::Mesh;
-use super::mesh::MeshVertex;
 use super::math::Matrix4f;
-use super::camera::Camera;
+
+mod basic;
+pub mod mesh;
+pub mod camera;
+
+
+use self::mesh::MeshVertex;
+use self::mesh::Mesh;
+pub use self::camera::Camera;
+pub use self::basic::BasicRenderer; 
+
 
 pub struct RenderMesh{
     vertex: VertexBuffer<MeshVertex>,
@@ -27,48 +42,9 @@ pub struct RenderQueue<'a>{
 }
 
 pub struct Shader{
-    shader: Program,
+    pub shader: Program,
     //source: String,
 }
-
-static VS_SRC:&'static str = & r#"
-#version 330 
-
-in vec3 position;
-in vec3 normal;
-
-uniform mat4 _ModelTransform;
-uniform mat4 _CamTransform;
-uniform mat4 _PerspectiveTransform;
-
-out VS_OUT{
-    vec3 color;
-} vs_out;
-
-void main(){
-    vs_out.color = normal;
-
-    vec4 p = vec4(position,1.0);
-    mat4 trans =    _PerspectiveTransform * _CamTransform * _ModelTransform;
-
-    gl_Position = trans * p;
-}
-
-"#;
-
-static FS_SRC:&'static str = & r#"
-#version 330 
-
-in VS_OUT{
-    vec3 color;
-} fs_in;
-
-out vec4 color;
-
-void main(){
-    color = vec4(fs_in.color+0.1,1.0);
-}
-"#;
 
 #[derive(Debug)]
 pub enum BufferError{
@@ -90,6 +66,7 @@ impl From<vertex::BufferCreationError> for BufferError{
         }
     }
 }
+
 impl From<index::BufferCreationError> for BufferError{
     fn from(err: index::BufferCreationError) -> Self{
         match err {
@@ -126,53 +103,13 @@ impl From<program::ProgramCreationError> for ShaderCreationError{
     }
 }
 
-pub struct RenderEngine{
-    window: Rc<Window>,
-    shader: Program,
-}
 
-impl RenderEngine{
-    pub fn new(window: Rc<Window>) -> Self{
-        trace!("RenderEngine Creation.");
-        RenderEngine{
-            shader: Program::from_source(window.get_display(),&VS_SRC,&FS_SRC,None).unwrap(),
-            window: window,    
-        }
-    }
+pub trait RenderEngine{
+    fn render<'a>(&'a self, renderque: RenderQueue<'a>);
 
-    pub fn render<'a>(&'a self,renderque: RenderQueue<'a>){
-        trace!("Start rendering frame.");
-        let mut target = self.window.get_display().draw();
+    fn create_mesh(&self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
 
-        for obj in renderque.queue{
-        let uniform = uniform!{
-            _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
-            _CamTransform: renderque.cam.get_view().as_array(),
-            _ModelTransform: obj.transform.as_array(),
-        };
-            target.draw(&obj.mesh.vertex,&obj.mesh.index
-                        ,&self.shader,&uniform
-                        ,&Default::default()).unwrap();
-            
-        }
-        target.finish().unwrap();
-        trace!("End rendering frame.");
-    }
-
-    pub fn create_mesh(&self,mesh: &Mesh) -> Result<RenderMesh,BufferError>{
-        let vertex = try!(VertexBuffer::new(self.window.get_display(),&mesh.vertecies));
-        let index = try!(IndexBuffer::new(self.window.get_display()
-                                     ,index::PrimitiveType::TrianglesList,&mesh.index));
-        Ok(RenderMesh{
-            vertex: vertex,
-            index: index,
-        })
-    }
-
-    pub fn create_shader(&self,vs_src: String, fs_src: String, gs_src: Option<String>) -> Result<Program,ShaderCreationError>{
-        Program::from_source(self.window.get_display()
-                             ,&vs_src,&fs_src
-                             ,gs_src.as_ref().map(|x| x as &str))
-                                .map_err(|x| ShaderCreationError::from(x))
-    }
+    fn create_shader(&self,vs_src: String,
+                     fs_src: String, 
+                     gs_src: Option<String>) -> Result<Program,ShaderCreationError>;
 }

@@ -1,5 +1,5 @@
 
-use super::math::*;
+use super::super::math::*;
 use std::f32::consts;
 
 #[derive(Clone,Copy,Debug)]

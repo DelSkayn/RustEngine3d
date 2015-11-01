@@ -7,9 +7,8 @@ authors = ["DelSkayn <yoko.minsky@gmail.com>"]
 glium = "*"
 log = "*" 
 image = "*"
-cgmath = "*"
 time = "0.1"
-num_cpus = "0.2"
+num_cpus = "*"
 
 [profile.dev]
 opt-level = 0

@@ -4,17 +4,20 @@ use super::event::BaseEvent;
 use super::event::KeyBoard;
 use super::event::Key;
 use super::window;
+use super::render::BasicRenderer;
 use super::render::RenderEngine;
 use super::render::RenderQueue;
-use super::camera::Camera;
+use super::render::camera::Camera;
 use super::Game;
+use super::thread_pool::ThreadPool;
 
 use std::rc::Rc;
+
 pub struct Engine<T: Game>{
     console: Rc<console::Console>,
     window: Rc<window::Window>,
     event_loop: event::EventLoop<BaseEvent>,
-    renderengine: RenderEngine,
+    renderengine: BasicRenderer,
     running: bool,
     game: T,
 }
@@ -37,7 +40,8 @@ impl<T: Game> Engine<T>{
         trace!("Game setup.");
 
         trace!("Finising engine startup.");
-        let renderengine = RenderEngine::new(win.clone());
+        let renderengine = BasicRenderer::new(win.clone());
+
         Engine{
             console: rc_cons,
             window: win,
@@ -50,6 +54,7 @@ impl<T: Game> Engine<T>{
     pub fn run(&mut self){
         trace!("Start running engine.");
 
+        let pool = ThreadPool::new();
         
         trace!("Start game loop.");
         while self.running{

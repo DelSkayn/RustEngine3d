@@ -1,4 +1,5 @@
-use super::mesh;
+use super::render::mesh;
+
 pub struct ObjLoader{
     src: String,
 }
