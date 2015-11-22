@@ -24,7 +24,7 @@ pub struct Engine<T: Game>{
 
 impl<T: Game> Engine<T>{
     pub fn new() -> Self{
-        println!("Engine starting!");
+        println!("## Engine version: {}.{}.{} starting! ##\n",super::VERSION_MAJOR,super::VERSION_MINOR,super::VERSION_PATCH);
         trace!("Engine Startup.");
         let mut cons = console::Console::new();
         cons.add_command("quit",|_| Some(BaseEvent::Quit));
@@ -76,8 +76,6 @@ impl<T: Game> Engine<T>{
                 queue: vec![],
                 cam: Camera::new(),
             };
-
-            
 
             trace!("End handeling events.");
                 

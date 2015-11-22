@@ -1210,7 +1210,7 @@ mod test{
     use super::*;
     use std::f32::consts;
     #[test]
-    fn test(){
+    fn test_math(){
         let vec = Vector2f::new();
         let vec2 = Vector2f::from_array([3.4,5.6]);
         let vec3 = Vector2f::from_angle(consts::PI/2.0);

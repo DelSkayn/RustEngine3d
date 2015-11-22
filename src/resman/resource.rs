@@ -6,6 +6,7 @@ use std::collections::HashMap;
  */
 trait Resource{
     fn get_size() -> usize;
+    fn get_data() -> &[u8];
 }
 
 /*
@@ -35,15 +36,13 @@ struct ResourceStruct<T>
  * TODO: Figure out hashers in rust
  */
 pub struct ResourceManager{
-    resource_map: HashMap<String,Rc<Resource>>,
+    resource_map: HashMap<String,Rc<Option<Resource>>>,
 }
 
 /*
  * The handle for using a resources. it should not hold a direct reference
  * since a handle is directly returned without it neccesary being loaded.
- *
  */
-pub struct ResourceHandle<T: Resource>{
-    id: String,
-    res: Rc<Resource>,
+
+impl ResourceManager{
 }
