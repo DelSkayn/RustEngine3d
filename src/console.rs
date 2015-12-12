@@ -18,12 +18,9 @@ use std::io::Write;
 use std::collections::HashMap;
 use std::ops::Drop;
 
-use std::mem;
+use super::Event;
 
-use super::event::{
-    EventCreator,
-    BaseEvent,
-};
+use std::mem;
 
 
 pub use log::LogLevel;
@@ -104,14 +101,14 @@ impl ConsoleInput{
 
 }
 
-type ConsoleCommand<T> = Fn(&[&str]) -> Option<T>;
+type ConsoleCommand = Fn(&[&str]) -> Option<Event>;
 
 //
 //Struct handeling both the input and output and the
 //execution of commands from the console
-pub struct Console<T = BaseEvent>{
-    commands: HashMap<&'static str,Box<ConsoleCommand<T>>>,
-    events: RefCell<Vec<T>>,
+pub struct Console{
+    commands: HashMap<&'static str,Box<ConsoleCommand>>,
+    events: RefCell<Vec<Event>>,
     log_channel: Receiver<String>,
     input_channel: Receiver<String>,
     enable_logging: Cell<bool>,
@@ -224,14 +221,8 @@ impl<T> Console<T>{
         }
 }
 
-impl<T> EventCreator<T> for Console<T>{
-    fn get_events(&self) -> Vec<T>{
-        self.update();
-        mem::replace(&mut self.events.borrow_mut(),Vec::new())
-    }
-}
 
-impl<T> Drop for Console<T>{
+impl Drop for Console{
     fn drop(&mut self){
         //log pending messages
         self.update();

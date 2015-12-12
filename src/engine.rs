@@ -1,8 +1,4 @@
 use super::console;
-use super::event;
-use super::event::BaseEvent;
-use super::event::KeyBoard;
-use super::event::Key;
 use super::window;
 use super::render::BasicRenderer;
 use super::render::RenderEngine;
@@ -10,13 +6,13 @@ use super::render::RenderQueue;
 use super::render::camera::Camera;
 use super::Game;
 use super::thread_pool::ThreadPool;
+use super::Event;
 
 use std::rc::Rc;
 
 pub struct Engine<T: Game>{
     console: Rc<console::Console>,
     window: Rc<window::Window>,
-    event_loop: event::EventLoop<BaseEvent>,
     renderengine: BasicRenderer,
     running: bool,
     game: T,
@@ -27,7 +23,7 @@ impl<T: Game> Engine<T>{
         println!("## Engine version: {}.{}.{} starting! ##\n",super::VERSION_MAJOR,super::VERSION_MINOR,super::VERSION_PATCH);
         trace!("Engine Startup.");
         let mut cons = console::Console::new();
-        cons.add_command("quit",|_| Some(BaseEvent::Quit));
+        cons.add_command("quit",|_| Some(Event::Quit));
 
         let rc_cons = Rc::new(cons);
 

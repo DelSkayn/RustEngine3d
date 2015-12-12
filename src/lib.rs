@@ -9,8 +9,9 @@ extern crate log;
 extern crate image;
 extern crate time;
 
+pub mod kernal;
 pub mod console;
-pub mod event;
+pub mod input;
 pub mod window;
 pub mod engine;
 pub mod math;
@@ -29,7 +30,10 @@ pub trait Game{
     fn update(&mut self);
 }
 
-
-trait System{
-    fn get_id() -> &'static str;
+#[derive(Copy,Clone,Debug)]
+pub enum Event{
+    Core,
+    Input(input::InputEvent),
 }
+
+
