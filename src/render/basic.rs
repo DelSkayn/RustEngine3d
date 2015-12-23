@@ -45,54 +45,54 @@ void main(){
 "#;
 
 pub struct BasicRenderer{
-    window: Rc<Window>,
     shader: Program,
+    meshes: Vec<Renderable>,
 }
 
 impl BasicRenderer{
-    pub fn new(window: Rc<Window>) -> Self{
+    pub fn new(window: &Window) -> Self{
         trace!("RenderEngine Creation.");
         BasicRenderer{
             shader: Program::from_source(window.get_display(),&VS_SRC,&FS_SRC,None).unwrap(),
-            window: window,    
+            meshes: Vec::new(),
         }
     }
 }
 
 impl RenderEngine for BasicRenderer{
-    fn render<'a>(&'a self,renderque: RenderQueue<'a>){
+    fn render(&mut self,renderque: RenderQueue){
         trace!("Start rendering frame.");
-        let mut target = self.window.get_display().draw();
 
-        for obj in renderque.queue{
-        let uniform = uniform!{
-            _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
-            _CamTransform: renderque.cam.get_view().as_array(),
-            _ModelTransform: obj.transform.as_array(),
-        };
+        for robj in renderque.queue{
+            let uniform = uniform!{
+                _PerspectiveTransform: renderque.cam.get_perpective().as_array(),
+                _CamTransform: renderque.cam.get_view().as_array(),
+                _ModelTransform: robj.transform.as_array(),
+            };
+            let obj = &self.meshes[robj.RenderMesh.index];
             target.draw(&obj.mesh.vertex,&obj.mesh.index
                         ,&self.shader,&uniform
                         ,&Default::default()).unwrap();
-            
+
         }
         target.finish().unwrap();
         trace!("End rendering frame.");
     }
 
-    fn create_mesh(&self,mesh: &Mesh) -> Result<RenderMesh,BufferError>{
+    fn create_mesh(&mut self,mesh: &Mesh) -> Result<RenderMesh,BufferError>{
         let vertex = try!(VertexBuffer::new(self.window.get_display(),&mesh.vertecies));
         let index = try!(IndexBuffer::new(self.window.get_display()
-                                     ,index::PrimitiveType::TrianglesList,&mesh.index));
+                                          ,index::PrimitiveType::TrianglesList,&mesh.index));
         Ok(RenderMesh{
             vertex: vertex,
             index: index,
         })
     }
 
-    fn create_shader(&self,vs_src: String, fs_src: String, gs_src: Option<String>) -> Result<Program,ShaderCreationError>{
+    fn create_shader(&mut self,vs_src: String, fs_src: String, gs_src: Option<String>) -> Result<Program,ShaderCreationError>{
         Program::from_source(self.window.get_display()
                              ,&vs_src,&fs_src
                              ,gs_src.as_ref().map(|x| x as &str))
-                                .map_err(|x| ShaderCreationError::from(x))
+            .map_err(|x| ShaderCreationError::from(x))
     }
 }

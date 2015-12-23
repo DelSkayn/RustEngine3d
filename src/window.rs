@@ -5,16 +5,11 @@ use super::glium::DisplayBuild;
 
 use super::glium::glutin::WindowBuilder;
 
-use glium::glutin::Event;
-use glium::glutin::ElementState;
 use glium::glutin::MouseButton;
-use glium::glutin::MouseScrollDelta;
 use glium::glutin::VirtualKeyCode;
 
 use super::input::Button;
 use super::input::Key;
-use super::input::Mouse;
-use super::input::KeyBoard;
 
 pub struct Window{
     window: GlutinFacade,

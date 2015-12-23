@@ -25,15 +25,21 @@ const VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
 const VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
 
 pub trait Game{
-    fn new(&render::RenderEngine) -> Self;
-    fn render<'a>(&'a mut self,render::RenderQueue<'a>) -> render::RenderQueue<'a>;
+    fn new() -> Self;
+    fn render(&mut self);
     fn update(&mut self);
 }
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Clone,Debug)]
 pub enum Event{
-    Core,
+    Core(CoreEvent),
     Input(input::InputEvent),
+    Render(render::RenderEvent),
 }
 
-
+#[derive(Clone,Debug)]
+pub enum CoreEvent{
+    Quit,
+    Pause,
+    Continue,
+}

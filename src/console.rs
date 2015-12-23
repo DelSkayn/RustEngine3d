@@ -19,8 +19,8 @@ use std::collections::HashMap;
 use std::ops::Drop;
 
 use super::Event;
-
-use std::mem;
+use super::kernal::System;
+use super::kernal::EventHandle;
 
 
 pub use log::LogLevel;
@@ -102,7 +102,6 @@ impl ConsoleInput{
 }
 
 type ConsoleCommand = Fn(&[&str]) -> Option<Event>;
-
 //
 //Struct handeling both the input and output and the
 //execution of commands from the console
@@ -112,15 +111,16 @@ pub struct Console{
     log_channel: Receiver<String>,
     input_channel: Receiver<String>,
     enable_logging: Cell<bool>,
+    event: EventHandle,
     log_file: RefCell<File>,
 }
 
 
-impl<T> Console<T>{
-    pub fn new() -> Self{
+impl Console{
+    pub fn new(event:EventHandle) -> Self{
         let recv_in = ConsoleInput::new();
         let recv = ConsoleLogger::init().unwrap();
-        let mut commands = HashMap::<&'static str,Box<ConsoleCommand<T>>>::new();
+        let mut commands = HashMap::<&'static str,Box<ConsoleCommand>>::new();
         let file = File::create("log.txt").unwrap();
 
 
@@ -136,6 +136,7 @@ impl<T> Console<T>{
         commands.insert("null",Box::new(|args|(None)));
 
         Console{
+            event: event,
             commands: commands,
             events: RefCell::new(Vec::new()),
             log_channel: recv,
@@ -165,10 +166,26 @@ impl<T> Console<T>{
         }
     }
 
+
+
+    //
+    //Adds a command to be executed when the entered in the console
+    //
+    //It might be cool if these could be loaded from a file
+    //That would mean that i need some sort of interpeted language or so.
+    //Still Cool idea.
+    //
+    pub fn add_command<F>(&mut self,name: &'static str,func: F)
+        where F: Fn(&[&str]) -> Option<Event>, F: 'static{
+            self.commands.insert(name,Box::new(func));
+        }
+}
+
+impl System for Console{
     //gets input and executes commands
     //There is one hardcoded command
     //namely 'commands' wich returns all existing commands
-    pub fn update(&self){
+    fn run(&mut self){
         if self.enable_logging.get(){
             self.handel_logging();
         }
@@ -206,25 +223,12 @@ impl<T> Console<T>{
         };
         }
     }
-
-
-    //
-    //Adds a command to be executed when the entered in the console
-    //
-    //It might be cool if these could be loaded from a file
-    //That would mean that i need some sort of interpeted language or so.
-    //Still Cool idea.
-    //
-    pub fn add_command<F>(&mut self,name: &'static str,func: F)
-        where F: Fn(&[&str]) -> Option<T>, F: 'static{
-            self.commands.insert(name,Box::new(func));
-        }
 }
 
 
 impl Drop for Console{
     fn drop(&mut self){
         //log pending messages
-        self.update();
+        self.run();
     }
 }

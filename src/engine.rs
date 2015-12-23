@@ -1,4 +1,4 @@
-use super::console;
+use super::console::Console;
 use super::window;
 use super::render::BasicRenderer;
 use super::render::RenderEngine;
@@ -8,76 +8,38 @@ use super::Game;
 use super::thread_pool::ThreadPool;
 use super::Event;
 
+use super::kernal::{
+    KernalBuilder,
+    Kernal
+};
+
 use std::rc::Rc;
 
 pub struct Engine<T: Game>{
-    console: Rc<console::Console>,
-    window: Rc<window::Window>,
-    renderengine: BasicRenderer,
-    running: bool,
+    kernal: Kernal,
     game: T,
 }
 
 impl<T: Game> Engine<T>{
     pub fn new() -> Self{
-        println!("## Engine version: {}.{}.{} starting! ##\n",super::VERSION_MAJOR,super::VERSION_MINOR,super::VERSION_PATCH);
+        println!("## Engine version: {}.{}.{} starting! ##\n"
+                 ,super::VERSION_MAJOR,super::VERSION_MINOR
+                 ,super::VERSION_PATCH);
         trace!("Engine Startup.");
-        let mut cons = console::Console::new();
-        cons.add_command("quit",|_| Some(Event::Quit));
+        let mut builder = KernalBuilder::new();
 
-        let rc_cons = Rc::new(cons);
+        let console = Console::new(builder.get_event_handle());
 
-        let mut e_loop = event::EventLoop::<BaseEvent>::new();
-        e_loop.register(rc_cons.clone());
-
-        trace!("Window Creation.");
-        let win = Rc::new(window::Window::new());
-        e_loop.register(win.clone());
-        trace!("Game setup.");
-
-        trace!("Finising engine startup.");
-        let renderengine = BasicRenderer::new(win.clone());
+        let kernal = builder.build();
 
         Engine{
-            console: rc_cons,
-            window: win,
-            event_loop: e_loop,
-            running: true,
-            game: T::new(&renderengine),
-            renderengine: renderengine,
+            kernal: kernal,
+            game: T::new(),
         }
     }
     pub fn run(&mut self){
         trace!("Start running engine.");
-
-        let pool = ThreadPool::new();
-        
-        trace!("Start game loop.");
-        while self.running{
-            trace!("Start game itteration.");
-            self.event_loop.pull_events();
-            trace!("Start handeling events.");
-            for &event in self.event_loop.get_events(){
-                trace!("Events: {:?}",event);
-                match event{
-                    BaseEvent::Quit => {self.running = false;},
-                    BaseEvent::KeyBoard(KeyBoard::Pressed(Key::Esc)) => {self.running = false;},
-                    _ => (),
-                }
-            }
-
-            self.game.update();
-
-            let que = RenderQueue{
-                queue: vec![],
-                cam: Camera::new(),
-            };
-
-            trace!("End handeling events.");
-                
-            self.renderengine.render(self.game.render(que));
-            trace!("End game itteration.");
-        }
+        self.kernal.run();
         info!("Quiting engine!");
     }
 

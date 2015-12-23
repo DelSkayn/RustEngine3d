@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::glium::{
     VertexBuffer,
     IndexBuffer,
@@ -23,21 +25,29 @@ use self::mesh::Mesh;
 pub use self::camera::Camera;
 pub use self::basic::BasicRenderer; 
 
+#[derive(Clone,Debug)]
+pub enum RenderEvent{
+    AddQueue(Arc<RenderQueue>),
+    Frame,
+    FrameDone,
+}
 
-pub struct RenderMesh{
+pub struct Renderable{
     vertex: VertexBuffer<MeshVertex>,
     index: IndexBuffer<u16>,
 }
 
-#[derive(Clone,Copy)]
-pub struct RenderObject<'a>{
-    pub mesh: &'a RenderMesh,
+pub struct RenderMesh{
+    index: usize,
+}
+
+pub struct RenderObject{
+    pub mesh: RenderMesh,
     pub transform: Matrix4f,
 }
 
-#[derive(Clone)]
-pub struct RenderQueue<'a>{
-    pub queue: Vec<RenderObject<'a>>,
+pub struct RenderQueue{
+    pub queue: Vec<RenderObject>,
     pub cam: Camera,
 }
 
@@ -105,11 +115,11 @@ impl From<program::ProgramCreationError> for ShaderCreationError{
 
 
 pub trait RenderEngine{
-    fn render<'a>(&'a self, renderque: RenderQueue<'a>);
+    fn render(&mut self, renderque: RenderQueue);
 
-    fn create_mesh(&self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
+    fn create_mesh(&mut self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
 
-    fn create_shader(&self,vs_src: String,
+    fn create_shader(&mut self,vs_src: String,
                      fs_src: String, 
                      gs_src: Option<String>) -> Result<Program,ShaderCreationError>;
 }
