@@ -42,7 +42,3 @@ pub enum Button{
     Esc,
     Unkown,
 }
-
-pub trait Window{
-    fn poll_events(&mut self) -> InputEvent;
-}

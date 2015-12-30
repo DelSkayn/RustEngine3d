@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use std::fmt;
+
 use super::glium::{
     VertexBuffer,
     IndexBuffer,
@@ -8,6 +10,7 @@ use super::glium::{
     index,
     vertex,
     program,
+    Frame,
 };
 
 //use super::glium::draw_parameters::PolygonMode;
@@ -46,9 +49,16 @@ pub struct RenderObject{
     pub transform: Matrix4f,
 }
 
+
 pub struct RenderQueue{
     pub queue: Vec<RenderObject>,
     pub cam: Camera,
+}
+
+impl fmt::Debug for RenderQueue{
+    fn fmt(&self,f: &mut fmt::Formatter) -> fmt::Result{
+        write!(f,"RenderQueue")
+    }
 }
 
 pub struct Shader{
@@ -115,7 +125,7 @@ impl From<program::ProgramCreationError> for ShaderCreationError{
 
 
 pub trait RenderEngine{
-    fn render(&mut self, renderque: RenderQueue);
+    fn render(&mut self, renderque: RenderQueue,frame: Frame);
 
     fn create_mesh(&mut self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
 

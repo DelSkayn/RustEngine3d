@@ -42,4 +42,5 @@ pub enum CoreEvent{
     Quit,
     Pause,
     Continue,
+    Resize(u32,u32),
 }

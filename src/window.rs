@@ -6,20 +6,31 @@ use super::glium::DisplayBuild;
 use super::glium::glutin::WindowBuilder;
 
 use glium::glutin::MouseButton;
+use glium::glutin::Event as GlutinEvent;
+use glium::glutin::MouseScrollDelta;
+use glium::glutin::ElementState;
 use glium::glutin::VirtualKeyCode;
 
-use super::input::Button;
-use super::input::Key;
+use super::input::*;
+
+use super::kernal::System;
+use super::kernal::EventHandle;
+
+
+use super::Event;
+use super::CoreEvent;
 
 pub struct Window{
     window: GlutinFacade,
-}
+    event: EventHandle,
+} 
 
 impl Window{
-    pub fn new() -> Self{
+    pub fn new(event: EventHandle) -> Self{
         let builder = WindowBuilder::new().with_dimensions(800,600);
         Window{
             window: builder.build_glium().unwrap(),
+            event: event,
         }
     }
 
@@ -67,29 +78,30 @@ impl Window{
     }
 }
 
-/*
-    fn get_events(&self) -> Vec<BaseEvent>{
-        self.window.poll_events().filter_map(
-            |ev|match ev{
-                Event::Resized(w,h) => Some(BaseEvent::Resize(w,h)),
-                Event::Closed => Some(BaseEvent::Quit),
-                Event::MouseMoved((w,h)) => 
-                    Some(BaseEvent::Mouse(Mouse::Move([w as f32,h as f32]))),
-                Event::MouseInput(ElementState::Pressed, x) => 
-                    Some(BaseEvent::Mouse(Mouse::Pressed(Window::match_button(x)))),
-                Event::MouseInput(ElementState::Released, x) => 
-                    Some(BaseEvent::Mouse(Mouse::Released(Window::match_button(x)))),
-                Event::MouseWheel(MouseScrollDelta::LineDelta(_,y)) =>  
-                    Some(BaseEvent::Mouse(Mouse::Wheel(y))),
-                Event::MouseWheel(MouseScrollDelta::PixelDelta(_,y)) =>  
-                    Some(BaseEvent::Mouse(Mouse::Wheel(y))),
-                Event::KeyboardInput(ElementState::Pressed,_,Some(x)) =>
-                    Some(BaseEvent::KeyBoard(KeyBoard::Pressed(Window::match_key(x)))),
-                Event::KeyboardInput(ElementState::Released,_,Some(x)) =>
-                    Some(BaseEvent::KeyBoard(KeyBoard::Released(Window::match_key(x)))),
-                Event::ReceivedCharacter(x) =>
-                    Some(BaseEvent::KeyBoard(KeyBoard::Character(x))),
-                _ => None,
-            }).collect()
+impl System for Window{
+    fn run(&mut self){
+        for ev in self.window.poll_events(){
+            self.event.push(match ev{
+                GlutinEvent::Resized(w,h) => Event::Core(CoreEvent::Resize(w,h)),
+                GlutinEvent::Closed => Event::Core(CoreEvent::Quit),
+                GlutinEvent::MouseMoved((w,h)) => 
+                    Event::Input(InputEvent::Mouse(Mouse::Move([w as f32,h as f32]))),
+                GlutinEvent::MouseInput(ElementState::Pressed, x) => 
+                    Event::Input(InputEvent::Mouse(Mouse::Pressed(Window::match_button(x)))),
+                GlutinEvent::MouseInput(ElementState::Released, x) => 
+                    Event::Input(InputEvent::Mouse(Mouse::Released(Window::match_button(x)))),
+                GlutinEvent::MouseWheel(MouseScrollDelta::LineDelta(_,y)) =>  
+                    Event::Input(InputEvent::Mouse(Mouse::Wheel(y))),
+                GlutinEvent::MouseWheel(MouseScrollDelta::PixelDelta(_,y)) =>  
+                    Event::Input(InputEvent::Mouse(Mouse::Wheel(y))),
+                GlutinEvent::KeyboardInput(ElementState::Pressed,_,Some(x)) =>
+                    Event::Input(InputEvent::KeyBoard(KeyBoard::Pressed(Window::match_key(x)))),
+                GlutinEvent::KeyboardInput(ElementState::Released,_,Some(x)) =>
+                    Event::Input(InputEvent::KeyBoard(KeyBoard::Released(Window::match_key(x)))),
+                GlutinEvent::ReceivedCharacter(x) =>
+                    Event::Input(InputEvent::KeyBoard(KeyBoard::Character(x))),
+                _ => continue,
+            });
+        }
     }
-*/
+}

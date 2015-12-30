@@ -1,16 +1,16 @@
-use std::iter;
-use std::sync::Condvar;
-use std::sync::mpsc::channel;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering; use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::mpsc::TryRecvError;
+use std::sync::Arc;
+use std::sync::Condvar;
+use std::sync::Mutex;
 use std::thread;
 use std::thread::JoinHandle;
 use std::thread::spawn;
 
-
-use std::mem::swap;
-
+use std::time::Duration;
 
 use super::Event;
 use super::CoreEvent;
@@ -47,6 +47,7 @@ pub trait System{
 pub struct EventHandle{
     recv: Receiver<Event>,
     send: Sender<Event>,
+    notify: Arc<Condvar>,
 }
 
 impl EventHandle{
@@ -73,7 +74,10 @@ impl EventHandle{
      */
     pub fn push(&self,event: Event) -> bool{
         match self.send.send(event){
-            Ok(_) => true,
+            Ok(_) => {
+                self.notify.notify_one();
+                true
+            },
             Err(_) => false,
         }
     }
@@ -90,25 +94,24 @@ impl<'a> IntoIterator for &'a mut EventHandle{
 }
 
 pub struct KernalBuilder{
-    condvar: Condvar,
     systems: Vec<Box<System>>,
     senders: Vec<Sender<Event>>,
     recievers: Vec<Receiver<Event>>,
+    notify: Arc<Condvar>,
 }
 
 impl KernalBuilder{
     pub fn new() -> Self{
         KernalBuilder{
-            condvar: Condvar::new(),
             systems: Vec::new(),
             senders: Vec::new(),
             recievers: Vec::new(),
+            notify: Arc::new(Condvar::new()),
         }
     }
 
-    pub fn add_system(mut self,sys: Box<System>) -> Self{
+    pub fn add_system(&mut self,sys: Box<System>){
         self.systems.push(sys);
-        self
     }
 
     pub fn get_event_handle(&mut self) -> EventHandle{
@@ -117,22 +120,26 @@ impl KernalBuilder{
         let handle = EventHandle{
             recv: handle_recv,
             send: handle_send,
+            notify: self.notify.clone(),
         };
         self.senders.push(send);
         self.recievers.push(recv);
         handle
     }
 
-    pub fn build(&mut self) -> Kernal{
-        let mut thread = KernalThread{
-                recievers: self.recievers,
-                senders: self.senders,
+    pub fn build(self) -> Kernal{
+        let running = Arc::new(AtomicBool::new(true));
+        let mut thread_data = KernalThread{
+            recievers: self.recievers,
+            senders: self.senders,
+            running: running.clone(),
+            notify: self.notify,
+            stupid_unnecessary_mutex: Mutex::new(()),
         };
-
         Kernal{
-            running: true,
             systems: self.systems,
-            thread: thread::spawn(move || thread.run()),
+            thread: thread::spawn(move || thread_data.run()),
+            running: running,
         }
     }
 }
@@ -144,37 +151,66 @@ impl KernalBuilder{
 pub struct KernalThread{
     recievers: Vec<Receiver<Event>>,
     senders: Vec<Sender<Event>>,
+    running: Arc<AtomicBool>,
+    notify: Arc<Condvar>,
+    stupid_unnecessary_mutex: Mutex<()>,
+}
+
+struct NonBlockingIter<'a>{
+    reciever: &'a Receiver<Event>,
+}
+
+impl<'a> Iterator for NonBlockingIter<'a>{
+    type Item = Event;
+
+    fn next(&mut self) -> Option<Event>{
+        self.reciever.try_recv().ok()
+    }
 }
 
 impl KernalThread{
     fn run(&mut self){
-        loop{
+        trace!("Starting messages thread.");
+        'main: loop{
             if self.recievers.len() > 0 {
-                for e in self.recievers.iter().flat_map(move |it| it.iter()){
-                    for sender in &self.senders{
-                        sender.send(e.clone());
+                for e in self.recievers.iter()
+                    .flat_map(move |it| NonBlockingIter{reciever: &it}){
+                        match e {
+                            Event::Core(CoreEvent::Quit) => {
+                                self.running.store(false,Ordering::Relaxed);
+                                break 'main;
+                            },
+                            _ => {},
+                        }
+                        trace!("Event: {:?}",e);
+                        for sender in &self.senders{
+                            sender.send(e.clone()).unwrap();
+                        }
                     }
-                }
             }
+            self.notify.wait(self.stupid_unnecessary_mutex.lock().unwrap()).unwrap();
         }
+        trace!("Quiting messages thread.");
     }
 }
 
 pub struct Kernal{
-    running: bool,
+    running: Arc<AtomicBool>,
     systems: Vec<Box<System>>,
     thread: JoinHandle<()>,
 }
 
 impl Kernal{
-
     pub fn run(&mut self){
-        while self.running {
+        trace!("Starting kernal.");
+        while self.running.load(Ordering::Relaxed) {
             //collect
             for i in 0..self.systems.len(){
                 self.systems[i].run();
             }
+            thread::sleep(Duration::from_millis(10));
         }
+        trace!("Quiting kernal.");
     }
 }
 

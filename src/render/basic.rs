@@ -1,4 +1,5 @@
 use super::super::glium::*;
+use super::super::glium::backend::glutin_backend::GlutinFacade;
 use super::*;
 use super::mesh::Mesh;
 use super::super::window::Window;
@@ -45,14 +46,16 @@ void main(){
 "#;
 
 pub struct BasicRenderer{
+    context: GlutinFacade,
     shader: Program,
     meshes: Vec<Renderable>,
 }
 
 impl BasicRenderer{
-    pub fn new(window: &Window) -> Self{
+    pub fn new(context: GlutinFacade,window: &Window) -> Self{
         trace!("RenderEngine Creation.");
         BasicRenderer{
+            context: context,
             shader: Program::from_source(window.get_display(),&VS_SRC,&FS_SRC,None).unwrap(),
             meshes: Vec::new(),
         }
@@ -60,7 +63,7 @@ impl BasicRenderer{
 }
 
 impl RenderEngine for BasicRenderer{
-    fn render(&mut self,renderque: RenderQueue){
+    fn render(&mut self,renderque: RenderQueue,mut frame: Frame){
         trace!("Start rendering frame.");
 
         for robj in renderque.queue{
@@ -69,28 +72,32 @@ impl RenderEngine for BasicRenderer{
                 _CamTransform: renderque.cam.get_view().as_array(),
                 _ModelTransform: robj.transform.as_array(),
             };
-            let obj = &self.meshes[robj.RenderMesh.index];
-            target.draw(&obj.mesh.vertex,&obj.mesh.index
+            let obj = &self.meshes[robj.mesh.index];
+            frame.draw(&obj.vertex,&obj.index
                         ,&self.shader,&uniform
                         ,&Default::default()).unwrap();
 
         }
-        target.finish().unwrap();
+        frame.finish().unwrap();
         trace!("End rendering frame.");
     }
 
     fn create_mesh(&mut self,mesh: &Mesh) -> Result<RenderMesh,BufferError>{
-        let vertex = try!(VertexBuffer::new(self.window.get_display(),&mesh.vertecies));
-        let index = try!(IndexBuffer::new(self.window.get_display()
-                                          ,index::PrimitiveType::TrianglesList,&mesh.index));
-        Ok(RenderMesh{
+        let vertex = try!(VertexBuffer::new(&self.context,&mesh.vertecies));
+        let index = try!(IndexBuffer::new(&self.context ,index::PrimitiveType::TrianglesList
+                                          ,&mesh.index));
+        let index_mesh = self.meshes.len();
+        self.meshes.push(Renderable{
             vertex: vertex,
             index: index,
+        });
+        Ok(RenderMesh{
+            index: index_mesh,
         })
     }
 
     fn create_shader(&mut self,vs_src: String, fs_src: String, gs_src: Option<String>) -> Result<Program,ShaderCreationError>{
-        Program::from_source(self.window.get_display()
+        Program::from_source(&self.context
                              ,&vs_src,&fs_src
                              ,gs_src.as_ref().map(|x| x as &str))
             .map_err(|x| ShaderCreationError::from(x))

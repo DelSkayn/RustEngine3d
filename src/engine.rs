@@ -1,19 +1,13 @@
 use super::console::Console;
-use super::window;
-use super::render::BasicRenderer;
-use super::render::RenderEngine;
-use super::render::RenderQueue;
-use super::render::camera::Camera;
 use super::Game;
-use super::thread_pool::ThreadPool;
 use super::Event;
+use super::CoreEvent;
+use super::window::Window;
 
 use super::kernal::{
     KernalBuilder,
     Kernal
 };
-
-use std::rc::Rc;
 
 pub struct Engine<T: Game>{
     kernal: Kernal,
@@ -25,10 +19,20 @@ impl<T: Game> Engine<T>{
         println!("## Engine version: {}.{}.{} starting! ##\n"
                  ,super::VERSION_MAJOR,super::VERSION_MINOR
                  ,super::VERSION_PATCH);
-        trace!("Engine Startup.");
         let mut builder = KernalBuilder::new();
 
-        let console = Console::new(builder.get_event_handle());
+        let mut console = Box::new(Console::new(builder.get_event_handle()));
+        trace!("Engine Startup.");
+
+        console.add_command("quit",|_| {
+            println!("Does something");
+            Some(Event::Core(CoreEvent::Quit))
+        });
+
+        let window = Box::new(Window::new(builder.get_event_handle()));
+
+        builder.add_system(console);
+        builder.add_system(window);
 
         let kernal = builder.build();
 
@@ -38,7 +42,7 @@ impl<T: Game> Engine<T>{
         }
     }
     pub fn run(&mut self){
-        trace!("Start running engine.");
+        trace!("Starting engine.");
         self.kernal.run();
         info!("Quiting engine!");
     }

@@ -2,11 +2,13 @@
 use super::log;
 use log::{LogRecord, LogMetadata,SetLoggerError,LogLevelFilter};
 use log::LogLevel::*;
+
+use super::time;
+
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::sync::Arc;
 use std::sync::Mutex;
-use super::time;
 use std::thread;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
@@ -16,6 +18,8 @@ use std::io;
 use std::fs::File;
 use std::io::Write;
 use std::collections::HashMap;
+
+use std::str::FromStr;
 use std::ops::Drop;
 
 use super::Event;
@@ -42,7 +46,7 @@ impl ConsoleLogger{
     fn init() -> Result<Receiver<String>, SetLoggerError>{
         let (send,recv) = channel::<String>();
         log::set_logger(move |max_log_level| {
-            max_log_level.set(LogLevelFilter::Debug);
+            max_log_level.set(LogLevelFilter::Trace);
             Box::new(ConsoleLogger{
                 log_channel: Mutex::new(send),
             })
@@ -52,7 +56,7 @@ impl ConsoleLogger{
 
 impl log::Log for ConsoleLogger{
     fn enabled(&self, metadata: &LogMetadata) -> bool{
-        metadata.level() <= LogLevel::Debug
+        metadata.level() <= LogLevel::Trace
     }
 
     fn log(&self, record: &LogRecord){
@@ -63,8 +67,12 @@ impl log::Log for ConsoleLogger{
                               ,time::now().strftime("%T").unwrap()
                               ,record.level()
                               ,record.args());
-            self.log_channel.lock().unwrap().send(res).unwrap();
-
+            match self.log_channel.lock().unwrap().send(res){
+                Ok(_) => {},
+                Err(x) => {
+                    warn!("Console was deleted! Disabling logging to file");
+                }
+            }
         }
     }
 }
@@ -81,6 +89,7 @@ struct ConsoleInput{
 impl ConsoleInput{
     fn new() -> Receiver<String>{
         let (send,recv) = channel::<String>();
+        trace!("Creating Console Input thread!");
         Self::run(send);
         recv
     }
@@ -89,14 +98,20 @@ impl ConsoleInput{
     //Creates the reading thread and starts its work
     //
     fn run(send: Sender<String>){
-        thread::spawn(move ||{
+        thread::Builder::new().name(String::from_str("ConsoleInputThread").unwrap()).spawn(move ||{
             let io_in = io::stdin();
-            loop {
+            'main: loop {
                 let mut input = String::new();
                 io_in.read_line(&mut input).unwrap();
-                send.send(input).unwrap();
+                match send.send(input){
+                    Ok(_) => {},
+                    Err(x) => {
+                        warn!("Console was deleted! Quiting input thread");
+                        break 'main;
+                    }
+                };
             }
-        });
+        }).unwrap();
     }
 
 }
@@ -107,7 +122,6 @@ type ConsoleCommand = Fn(&[&str]) -> Option<Event>;
 //execution of commands from the console
 pub struct Console{
     commands: HashMap<&'static str,Box<ConsoleCommand>>,
-    events: RefCell<Vec<Event>>,
     log_channel: Receiver<String>,
     input_channel: Receiver<String>,
     enable_logging: Cell<bool>,
@@ -118,8 +132,9 @@ pub struct Console{
 
 impl Console{
     pub fn new(event:EventHandle) -> Self{
-        let recv_in = ConsoleInput::new();
         let recv = ConsoleLogger::init().unwrap();
+        trace!("Creating Console");
+        let recv_in = ConsoleInput::new();
         let mut commands = HashMap::<&'static str,Box<ConsoleCommand>>::new();
         let file = File::create("log.txt").unwrap();
 
@@ -138,7 +153,6 @@ impl Console{
         Console{
             event: event,
             commands: commands,
-            events: RefCell::new(Vec::new()),
             log_channel: recv,
             enable_logging: Cell::new(true),
             log_file: RefCell::new(file),
@@ -190,7 +204,6 @@ impl System for Console{
             self.handel_logging();
         }
 
-        let mut events = self.events.borrow_mut();
         while let Ok(e) = self.input_channel.try_recv(){
             let mut split = e.split_whitespace();
             let name = match split.next(){
@@ -211,13 +224,13 @@ impl System for Console{
         }
         match self.commands.get(name) {
             None => {
-                println!("Command {} not regonized",name);
+                println!("Command \"{}\" not regonized",name);
                 continue;
             },
             Some(x) => {
                 let args: Vec<_> = split.collect();
                 if let Some(x) = x(&args){
-                    events.push(x);
+                    self.event.push(x);
                 }
             }
         };
