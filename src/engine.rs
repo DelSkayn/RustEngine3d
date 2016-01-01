@@ -4,6 +4,9 @@ use super::Event;
 use super::CoreEvent;
 use super::window::Window;
 
+use super::render::RenderSystem;
+use super::render::basic::BasicRenderer;
+
 use super::kernal::{
     KernalBuilder,
     Kernal
@@ -31,8 +34,13 @@ impl<T: Game> Engine<T>{
 
         let window = Box::new(Window::new(builder.get_event_handle()));
 
+        let render_engine = Box::new(RenderSystem::<BasicRenderer>::new(
+            window.get_display().clone()
+            ,builder.get_event_handle()));
+
         builder.add_system(console);
         builder.add_system(window);
+        builder.add_system(render_engine);
 
         let kernal = builder.build();
 

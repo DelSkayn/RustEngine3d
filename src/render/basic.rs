@@ -1,6 +1,7 @@
 use super::super::glium::*;
 use super::super::glium::backend::glutin_backend::GlutinFacade;
 use super::*;
+use super::super::kernal::EventHandle;
 use super::mesh::Mesh;
 use super::super::window::Window;
 use std::rc::Rc;
@@ -51,19 +52,19 @@ pub struct BasicRenderer{
     meshes: Vec<Renderable>,
 }
 
-impl BasicRenderer{
-    pub fn new(context: GlutinFacade,window: &Window) -> Self{
+impl RenderEngine for BasicRenderer{
+    fn new(context: GlutinFacade) -> Self{
         trace!("RenderEngine Creation.");
         BasicRenderer{
+            shader: Program::from_source(&context,VS_SRC,&FS_SRC,None).unwrap(),
             context: context,
-            shader: Program::from_source(window.get_display(),&VS_SRC,&FS_SRC,None).unwrap(),
             meshes: Vec::new(),
         }
     }
-}
 
-impl RenderEngine for BasicRenderer{
-    fn render(&mut self,renderque: RenderQueue,mut frame: Frame){
+    fn render(&mut self,renderque: RenderQueue){
+        let mut frame = self.context.draw();
+
         trace!("Start rendering frame.");
 
         for robj in renderque.queue{

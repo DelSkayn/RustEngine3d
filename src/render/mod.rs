@@ -1,4 +1,10 @@
 use std::sync::Arc;
+use super::glium::backend::glutin_backend::GlutinFacade;
+
+use super::kernal::EventHandle;
+use super::kernal::System;
+
+use super::Event;
 
 use std::fmt;
 
@@ -18,7 +24,7 @@ use super::glium::{
 
 use super::math::Matrix4f;
 
-mod basic;
+pub mod basic;
 pub mod mesh;
 pub mod camera;
 
@@ -123,9 +129,45 @@ impl From<program::ProgramCreationError> for ShaderCreationError{
     }
 }
 
+pub struct RenderSystem<T: RenderEngine>{
+    render_engine: T,
+    event: EventHandle,
+}
+
+impl<T: RenderEngine> RenderSystem<T>{
+    pub fn new(context: GlutinFacade,event: EventHandle) -> Self{
+        RenderSystem{
+            render_engine: T::new(context),
+            event: event,
+        }
+    }
+}
+
+impl<T: RenderEngine> System for RenderSystem<T>{
+
+    fn run(&mut self){
+        for e in self.event.into_iter(){
+            match e {
+                Event::Render(x) => {
+                    match x {
+                        RenderEvent::Frame => self.render_engine.render(
+                            RenderQueue{
+                                queue: Vec::new(),
+                                cam: Camera::new(),
+                            }),
+                        _ => {},
+                    }
+                },
+                _ => {},
+            }
+        }
+    }
+}
 
 pub trait RenderEngine{
-    fn render(&mut self, renderque: RenderQueue,frame: Frame);
+    fn new(context: GlutinFacade) -> Self;
+
+    fn render(&mut self, renderque: RenderQueue);
 
     fn create_mesh(&mut self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
 
@@ -133,3 +175,4 @@ pub trait RenderEngine{
                      fs_src: String, 
                      gs_src: Option<String>) -> Result<Program,ShaderCreationError>;
 }
+

@@ -16,9 +16,11 @@ use super::input::*;
 use super::kernal::System;
 use super::kernal::EventHandle;
 
-
 use super::Event;
 use super::CoreEvent;
+
+//TODO: Temp testing remove
+use super::render::RenderEvent;
 
 pub struct Window{
     window: GlutinFacade,
@@ -103,5 +105,7 @@ impl System for Window{
                 _ => continue,
             });
         }
+        //TODO: Temp testing remove
+        self.event.push(Event::Render(RenderEvent::Frame));
     }
 }

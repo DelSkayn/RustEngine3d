@@ -86,10 +86,12 @@ impl EventHandle{
 
 impl<'a> IntoIterator for &'a mut EventHandle{
     type Item = Event;
-    type IntoIter = <&'a Receiver<Event> as IntoIterator>::IntoIter;
+    type IntoIter = NonBlockingIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter{
-        (&self.recv).into_iter()
+        NonBlockingIter{
+            reciever: &self.recv,
+        }
     }
 }
 
@@ -156,7 +158,7 @@ pub struct KernalThread{
     stupid_unnecessary_mutex: Mutex<()>,
 }
 
-struct NonBlockingIter<'a>{
+pub struct NonBlockingIter<'a>{
     reciever: &'a Receiver<Event>,
 }
 
