@@ -15,6 +15,8 @@ use std::time::Duration;
 use super::Event;
 use super::CoreEvent;
 
+use super::profile::ProfileSample;
+
 pub enum SystemOption{
     Syncronized,
     JoinHandleed,
@@ -154,9 +156,13 @@ pub struct KernalThread{
     recievers: Vec<Receiver<Event>>,
     senders: Vec<Sender<Event>>,
     running: Arc<AtomicBool>,
+    //Maybe it is better to use park unpark.
+    //The current implementation needs a unnecessary mutex
     notify: Arc<Condvar>,
     stupid_unnecessary_mutex: Mutex<()>,
+    
 }
+
 
 pub struct NonBlockingIter<'a>{
     reciever: &'a Receiver<Event>,
@@ -173,24 +179,33 @@ impl<'a> Iterator for NonBlockingIter<'a>{
 impl KernalThread{
     fn run(&mut self){
         trace!("Starting messages thread.");
+        let mut i = 0;
         'main: loop{
-            if self.recievers.len() > 0 {
-                for e in self.recievers.iter()
-                    .flat_map(move |it| NonBlockingIter{reciever: &it}){
-                        match e {
-                            Event::Core(CoreEvent::Quit) => {
-                                self.running.store(false,Ordering::Relaxed);
-                                break 'main;
-                            },
-                            _ => {},
+            {
+                ProfileSample::new("Message thread loop");
+                if self.recievers.len() > 0 {
+                    for e in self.recievers.iter()
+                        .flat_map(move |it| NonBlockingIter{reciever: &it}){
+                            match e {
+                                Event::Core(CoreEvent::Quit) => {
+                                    self.running.store(false,Ordering::Relaxed);
+                                    break 'main;
+                                },
+                                _ => {},
+                            }
+                            trace!("Event: {:?}",e);
+                            for sender in &self.senders{
+                                sender.send(e.clone()).unwrap();
+                            }
                         }
-                        trace!("Event: {:?}",e);
-                        for sender in &self.senders{
-                            sender.send(e.clone()).unwrap();
-                        }
-                    }
+                }
+                self.notify.wait(self.stupid_unnecessary_mutex.lock().unwrap()).unwrap();
             }
-            self.notify.wait(self.stupid_unnecessary_mutex.lock().unwrap()).unwrap();
+            i +=1;
+            if i % 100 == 0 {
+                ProfileSample::print();
+                ProfileSample::clear();
+            }
         }
         trace!("Quiting messages thread.");
     }
@@ -206,11 +221,12 @@ impl Kernal{
     pub fn run(&mut self){
         trace!("Starting kernal.");
         while self.running.load(Ordering::Relaxed) {
+            ProfileSample::new("Kernal loop");
             //collect
             for i in 0..self.systems.len(){
                 self.systems[i].run();
             }
-            thread::sleep(Duration::from_millis(10));
+            //thread::sleep(Duration::from_millis(10));
         }
         trace!("Quiting kernal.");
     }

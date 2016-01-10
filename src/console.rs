@@ -56,7 +56,7 @@ impl ConsoleLogger{
 
 impl log::Log for ConsoleLogger{
     fn enabled(&self, metadata: &LogMetadata) -> bool{
-        metadata.level() <= LogLevel::Trace
+        metadata.level() <= LogLevel::Debug
     }
 
     fn log(&self, record: &LogRecord){

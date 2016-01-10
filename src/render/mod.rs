@@ -6,7 +6,11 @@ use super::kernal::System;
 
 use super::Event;
 
+use super::profile::ProfileSample;
+
 use std::fmt;
+
+use super::time;
 
 use super::glium::{
     VertexBuffer,
@@ -146,8 +150,12 @@ impl<T: RenderEngine> RenderSystem<T>{
 impl<T: RenderEngine> System for RenderSystem<T>{
 
     fn run(&mut self){
+        ProfileSample::new("Render system run");
         for e in self.event.into_iter(){
             match e {
+                Event::Profile(time) =>{
+                    debug!("Profile event render: {}",(time::precise_time_s() - time));
+                }
                 Event::Render(x) => {
                     match x {
                         RenderEvent::Frame => self.render_engine.render(

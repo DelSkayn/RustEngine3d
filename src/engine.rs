@@ -7,6 +7,9 @@ use super::window::Window;
 use super::render::RenderSystem;
 use super::render::basic::BasicRenderer;
 
+use super::time;
+use super::profile::ProfileSample;
+
 use super::kernal::{
     KernalBuilder,
     Kernal
@@ -28,8 +31,16 @@ impl<T: Game> Engine<T>{
         trace!("Engine Startup.");
 
         console.add_command("quit",|_| {
-            println!("Does something");
             Some(Event::Core(CoreEvent::Quit))
+        });
+
+        console.add_command("profile_events",|_| {
+            Some(Event::Profile(time::precise_time_s()))
+        });
+
+        console.add_command("print_profile",|_| {
+            ProfileSample::print();
+            None
         });
 
         let window = Box::new(Window::new(builder.get_event_handle()));

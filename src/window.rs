@@ -21,6 +21,9 @@ use super::CoreEvent;
 
 //TODO: Temp testing remove
 use super::render::RenderEvent;
+use super::time;
+
+use super::profile::ProfileSample;
 
 pub struct Window{
     window: GlutinFacade,
@@ -29,7 +32,7 @@ pub struct Window{
 
 impl Window{
     pub fn new(event: EventHandle) -> Self{
-        let builder = WindowBuilder::new().with_dimensions(800,600);
+        let builder = WindowBuilder::new().with_dimensions(800,600).with_vsync();
         Window{
             window: builder.build_glium().unwrap(),
             event: event,
@@ -82,6 +85,7 @@ impl Window{
 
 impl System for Window{
     fn run(&mut self){
+        ProfileSample::new("Window system run");
         for ev in self.window.poll_events(){
             self.event.push(match ev{
                 GlutinEvent::Resized(w,h) => Event::Core(CoreEvent::Resize(w,h)),
@@ -107,5 +111,14 @@ impl System for Window{
         }
         //TODO: Temp testing remove
         self.event.push(Event::Render(RenderEvent::Frame));
+
+        for e in self.event.into_iter(){
+            match e {
+                Event::Profile(time) =>{
+                    debug!("Profile event window: {}",(time::precise_time_s() - time));
+                },
+                _ => {},
+            }
+        }
     }
 }

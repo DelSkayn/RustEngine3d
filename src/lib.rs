@@ -9,6 +9,8 @@ extern crate log;
 extern crate image;
 extern crate time;
 
+pub mod profile;
+
 pub mod kernal;
 pub mod console;
 pub mod input;
@@ -32,6 +34,7 @@ pub trait Game{
 
 #[derive(Clone,Debug)]
 pub enum Event{
+    Profile(f64),
     Core(CoreEvent),
     Input(input::InputEvent),
     Render(render::RenderEvent),
