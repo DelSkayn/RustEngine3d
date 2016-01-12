@@ -20,7 +20,6 @@ use super::glium::{
     index,
     vertex,
     program,
-    Frame,
 };
 
 //use super::glium::draw_parameters::PolygonMode;
@@ -145,12 +144,13 @@ impl<T: RenderEngine> RenderSystem<T>{
             event: event,
         }
     }
+
 }
 
 impl<T: RenderEngine> System for RenderSystem<T>{
 
     fn run(&mut self){
-        ProfileSample::new("Render system run");
+        let _p = ProfileSample::new("Render system run");
         for e in self.event.into_iter(){
             match e {
                 Event::Profile(time) =>{
@@ -158,11 +158,14 @@ impl<T: RenderEngine> System for RenderSystem<T>{
                 }
                 Event::Render(x) => {
                     match x {
-                        RenderEvent::Frame => self.render_engine.render(
-                            RenderQueue{
-                                queue: Vec::new(),
-                                cam: Camera::new(),
-                            }),
+                        RenderEvent::Frame => {
+                            self.render_engine.render(
+                                RenderQueue{
+                                    queue: Vec::new(),
+                                    cam: Camera::new(),
+                                });
+                            self.event.push(Event::Render(RenderEvent::FrameDone));
+                        },
                         _ => {},
                     }
                 },

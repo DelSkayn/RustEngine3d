@@ -5,7 +5,8 @@ use super::time;
 
 struct ProfilerData{
     name: &'static str,
-    parent: usize,
+    parent: i32,
+    parent_count: u8,
     //TODO: change to ns
     total_time: f64,
     max_time: f64,
@@ -14,12 +15,12 @@ struct ProfilerData{
 }
 
 struct ProfilerManData{
-    last_profile: Cell<usize>,
+    last_profile: Cell<i32>,
     profile_data: RefCell<Vec<ProfilerData>>,
 }
 
 thread_local!(static PROFILER_DATA: ProfilerManData = ProfilerManData{
-    last_profile: Cell::new(0),
+    last_profile: Cell::new(-1),
     profile_data: RefCell::new(Vec::new()),
 });
 
@@ -42,11 +43,20 @@ impl ProfileSample{
                 }
             }
             if !found {
+                index = data.len();
                 let parent = d.last_profile.get();
-                d.last_profile.set(index);
+                println!("{}",parent);
+                println!("{}",index);
+                d.last_profile.set(index as i32);
+                let parent_count = if parent !=  -1 {
+                    data[parent as usize].parent_count+1
+                }else{
+                    0
+                };
                 data.push(ProfilerData{
                     name: name,
                     parent: parent,
+                    parent_count: parent_count,
                     total_time: 0.0,
                     times_called: 0,
                     max_time: 0.0,
@@ -63,15 +73,16 @@ impl ProfileSample{
     pub fn print(){
         PROFILER_DATA.with(|d|{
             let data = d.profile_data.borrow_mut();
-            println!("Profile: ");
+            println!("Total|  #  | Avg   | Min   | Max   : Name");
             for e in data.iter(){
-            println!("{} || total:{} | times:{} | avg:{} | min:{} | max:{} "
-                     ,e.name
-                     ,e.total_time * 1000.0
-                     ,e.times_called
-                     ,e.total_time  / (e.times_called as f64) * 1000.0
-                     ,e.min_time * 1000.0
-                     ,e.max_time * 1000.0);
+                println!("{:.*} | {:.*} | {:.*} | {:.*} | {:.*} : {}{}"
+                         ,2,e.total_time * 1000.0
+                         ,3,e.times_called
+                         ,3,e.total_time  / (e.times_called as f64) * 1000.0
+                         ,3,e.min_time * 1000.0
+                         ,3,e.max_time * 1000.0
+                         ,(0..e.parent_count).map(|_|' ').collect::<String>()
+                         ,e.name);
             }
         });
     }

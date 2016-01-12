@@ -1,11 +1,7 @@
 use super::super::glium::*;
 use super::super::glium::backend::glutin_backend::GlutinFacade;
 use super::*;
-use super::super::kernal::EventHandle;
 use super::mesh::Mesh;
-use super::super::window::Window;
-use std::rc::Rc;
-
 
 static VS_SRC:&'static str = & r#"
 #version 330 

@@ -85,7 +85,7 @@ impl Window{
 
 impl System for Window{
     fn run(&mut self){
-        ProfileSample::new("Window system run");
+        let _p = ProfileSample::new("Window system run");
         for ev in self.window.poll_events(){
             self.event.push(match ev{
                 GlutinEvent::Resized(w,h) => Event::Core(CoreEvent::Resize(w,h)),

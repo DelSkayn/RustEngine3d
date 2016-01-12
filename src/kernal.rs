@@ -86,7 +86,7 @@ impl EventHandle{
 }
 
 
-impl<'a> IntoIterator for &'a mut EventHandle{
+impl<'a> IntoIterator for &'a EventHandle{
     type Item = Event;
     type IntoIter = NonBlockingIter<'a>;
 
@@ -179,15 +179,16 @@ impl<'a> Iterator for NonBlockingIter<'a>{
 impl KernalThread{
     fn run(&mut self){
         trace!("Starting messages thread.");
-        let mut i = 0;
         'main: loop{
             {
-                ProfileSample::new("Message thread loop");
                 if self.recievers.len() > 0 {
                     for e in self.recievers.iter()
                         .flat_map(move |it| NonBlockingIter{reciever: &it}){
                             match e {
                                 Event::Core(CoreEvent::Quit) => {
+                                    for sender in &self.senders{
+                                        sender.send(e.clone()).unwrap();
+                                    }
                                     self.running.store(false,Ordering::Relaxed);
                                     break 'main;
                                 },
@@ -200,11 +201,6 @@ impl KernalThread{
                         }
                 }
                 self.notify.wait(self.stupid_unnecessary_mutex.lock().unwrap()).unwrap();
-            }
-            i +=1;
-            if i % 100 == 0 {
-                ProfileSample::print();
-                ProfileSample::clear();
             }
         }
         trace!("Quiting messages thread.");
@@ -221,12 +217,13 @@ impl Kernal{
     pub fn run(&mut self){
         trace!("Starting kernal.");
         while self.running.load(Ordering::Relaxed) {
-            ProfileSample::new("Kernal loop");
+            let _p1 = ProfileSample::new("Kernal loop");
+            let _p2 = ProfileSample::new("Test Kernal loop");
             //collect
             for i in 0..self.systems.len(){
                 self.systems[i].run();
             }
-            //thread::sleep(Duration::from_millis(10));
+            thread::sleep(Duration::from_millis(10));
         }
         trace!("Quiting kernal.");
     }

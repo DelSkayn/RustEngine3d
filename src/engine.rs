@@ -1,5 +1,5 @@
 use super::console::Console;
-use super::Game;
+use super::game::Game;
 use super::Event;
 use super::CoreEvent;
 use super::window::Window;
@@ -11,17 +11,18 @@ use super::time;
 use super::profile::ProfileSample;
 
 use super::kernal::{
+    System,
     KernalBuilder,
     Kernal
 };
 
-pub struct Engine<T: Game>{
+
+pub struct Engine{
     kernal: Kernal,
-    game: T,
 }
 
-impl<T: Game> Engine<T>{
-    pub fn new() -> Self{
+impl Engine{
+    pub fn new<T: Game>() -> Self{
         println!("## Engine version: {}.{}.{} starting! ##\n"
                  ,super::VERSION_MAJOR,super::VERSION_MINOR
                  ,super::VERSION_PATCH);
@@ -57,7 +58,6 @@ impl<T: Game> Engine<T>{
 
         Engine{
             kernal: kernal,
-            game: T::new(),
         }
     }
     pub fn run(&mut self){
@@ -67,4 +67,5 @@ impl<T: Game> Engine<T>{
     }
 
 }
+
 

@@ -26,7 +26,6 @@ use super::Event;
 use super::kernal::System;
 use super::kernal::EventHandle;
 
-
 pub use log::LogLevel;
 
 pub type LogLevelContainer<T> = Arc<Mutex<Cell<T>>>;
@@ -245,3 +244,4 @@ impl Drop for Console{
         self.run();
     }
 }
+

@@ -10,7 +10,6 @@ extern crate image;
 extern crate time;
 
 pub mod profile;
-
 pub mod kernal;
 pub mod console;
 pub mod input;
@@ -22,15 +21,13 @@ pub mod render;
 pub mod thread_pool;
 pub mod resman;
 
+pub mod game;
+pub use game::Game;
+
 const VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
 const VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
 const VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
 
-pub trait Game{
-    fn new() -> Self;
-    fn render(&mut self);
-    fn update(&mut self);
-}
 
 #[derive(Clone,Debug)]
 pub enum Event{
@@ -45,5 +42,7 @@ pub enum CoreEvent{
     Quit,
     Pause,
     Continue,
+    Frame(u64),
+    FrameDone(u64),
     Resize(u32,u32),
 }
