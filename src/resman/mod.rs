@@ -1,6 +1,13 @@
 mod file;
+mod res;
+
+
 use self::file::FileManager;
 use self::file::FileError as FError;
+
+use self::res::ResourceHandle;
+use self::res::ResourceManager;
+use self::res::ResError;
 
 use super::thread_pool::ThreadPool;
 
@@ -9,29 +16,31 @@ use std::path::Path;
 
 use std::env;
 
-pub type ResResult<T> = Result<T,ResError>;
+pub type RMResult<T> = Result<T,RMError>;
 
 #[derive(Debug)]
-pub enum ResError{
+pub enum RMError{
     FileError(FError),
+    ResourceError(ResError),
 }
 
-impl From<FError> for ResError{
-    fn from(fe: FError) -> ResError{
-        ResError::FileError(fe)
+impl From<FError> for RMError{
+    fn from(fe: FError) -> RMError{
+        RMError::FileError(fe)
+    }
+}
+
+impl From<ResError> for RMError{
+    fn from(re: ResError) -> RMError{
+        RMError::ResourceError(re)
     }
 }
 
 pub struct ResMan<'a>{
-    thread_pool: Option<&'a ThreadPool>,
     fman: FileManager,
+    rman: ResourceManager<'a>,
 }
 
-/*
-pub struct ResourceHandle<T: Resource>{
-    id: String,
-    res: Rc<Option<Resource>>,
-}*/
 
 pub struct ResManBuilder<'a>{
     thread_pool: Option<&'a ThreadPool>,
@@ -41,8 +50,8 @@ pub struct ResManBuilder<'a>{
 impl<'a> ResManBuilder<'a>{
     pub fn new() -> Self{
         ResManBuilder{
-            thread_pool: None,
             root: None,
+            thread_pool: None,
         }
     }
 
@@ -56,7 +65,7 @@ impl<'a> ResManBuilder<'a>{
         self
     }
 
-    pub fn build(self) -> ResResult<ResMan<'a>>{
+    pub fn build(self) -> RMResult<ResMan<'a>>{
         let root = match self.root {
             Some(x) => {
                 if x.is_relative(){
@@ -71,19 +80,40 @@ impl<'a> ResManBuilder<'a>{
         };
         let fm = try!(FileManager::new(root));
         Ok(ResMan{
-            thread_pool: self.thread_pool,
+            rman: ResourceManager::new(self.thread_pool),
             fman: fm,
         })
     }
 }
 
 impl<'a> ResMan<'a>{
-
-    fn import<S,P>(&mut self,name: S,path: P) -> ResResult<()>
-        where S: AsRef<str>,P: AsRef<Path>{
-        self.fman.import_file(name,path).map_err(|err| ResError::from(err))
+    fn get<S>(&mut self,name: S) -> Option<ResourceHandle>
+        where S: AsRef<str>{
+            self.rman.get(name)
     }
 
+    fn load<S>(&mut self,name: S) -> RMResult<ResourceHandle>
+        where S: AsRef<str>{
+            match String::from_str(name.as_ref()) {
+                try!(self.rman.load(name,&self.fman))
+            }
+    }
+
+    fn import<S,P>(&mut self,path: P) -> RMResult<()>
+        where S: AsRef<str>,P: AsRef<Path>{
+        self.fman.import_file(path.as_ref().to_str().unwrap()
+                              ,path.as_ref().clone())
+            .map_err(|err| RMError::from(err))
+    }
+
+    fn import_name<S,P>(&mut self,name: S,path: P) -> RMResult<()>
+        where S: AsRef<str>,P: AsRef<Path>{
+        self.fman.import_file(name,path).map_err(|err| RMError::from(err))
+    }
+
+    fn update(&mut self){
+        unimplemented!();
+    }
 }
 
 #[cfg(test)]
@@ -93,6 +123,6 @@ mod test{
     #[test]
     fn test_resman(){
         let mut resman = ResManBuilder::new().with_root("res/").build().unwrap();
-        resman.import("Teapot","teapot.obj").unwrap();
+        resman.import_name("Teapot","teapot.obj").unwrap();
     }
 }

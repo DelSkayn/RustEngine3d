@@ -14,10 +14,10 @@ pub mod event;
 pub mod window;
 pub mod engine;
 pub mod math;
-pub mod obj;
 pub mod render;
 pub mod thread_pool;
 pub mod resman;
+pub mod format;
 
 const VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
 const VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");

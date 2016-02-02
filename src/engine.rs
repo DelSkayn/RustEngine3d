@@ -53,10 +53,10 @@ impl<T: Game> Engine<T>{
     }
     pub fn run(&mut self){
         trace!("Start running engine.");
-
         let pool = ThreadPool::new();
-        
         trace!("Start game loop.");
+
+        //start game loop
         while self.running{
             trace!("Start game itteration.");
             self.event_loop.pull_events();

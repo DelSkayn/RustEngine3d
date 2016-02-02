@@ -1,13 +1,15 @@
-use super::render::mesh;
+use super::ResourceLoader;
+use super::ResError;
+use super::ResResult;
+use std::fs::File;
+use std::io::Read;
+
+use super::super::super::format;
 
 pub struct ObjLoader{
-    src: String,
+    file: File,
 }
 
-#[derive(Debug)]
-pub enum ObjError{
-    InvalidFormat(&'static str),
-} 
 #[derive(Eq,PartialEq,Debug)]
 enum IndexFormat{
     Normal,
@@ -15,38 +17,42 @@ enum IndexFormat{
     VNullN,
     NotTested,
 }
-//this temp
-//might not work well with multiple textures.
-impl ObjLoader{
-    pub fn new(src: String) -> Self{
+
+impl ResourceLoader for ObjLoader{
+    type Format = format::Mesh;
+
+    fn new(file: File) -> Self{
         ObjLoader{
-            src: src,
+            file: file,
         }
     }
     
-    pub fn load(self) -> Result<mesh::Mesh,ObjError>{
+    fn load(&mut self) -> ResResult<format::Mesh>{
+        let mut src = "".to_string();
+        try!(self.file.read_to_string(&mut src));
+
         let mut format = IndexFormat::NotTested;
         let mut vertecies = Vec::new();
         let mut normals = Vec::new();
-        let mut index = Vec::<u16>::new();
+        let mut index = Vec::<u32>::new();
         let mut index_texture = Vec::new();
         let mut index_normal = Vec::new();
 
-        let mut iter = self.src.split_whitespace().peekable();
+        let mut iter = src.split_whitespace().peekable();
         while let Some(word) = iter.next(){
             match word{
                 "v" => {
                     trace!("Found vertex");
                     let mut value = [0.0; 3];
 
-                    let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
-                    value[0] = try!(vertex_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse vertex"))));
+                    let vertex_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a vertex after V")));
+                    value[0] = try!(vertex_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse vertex"))));
 
-                    let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
-                    value[1] = try!(vertex_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse vertex"))));
+                    let vertex_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a vertex after V")));
+                    value[1] = try!(vertex_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse vertex"))));
 
-                    let vertex_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a vertex after V")));
-                    value[2] = try!(vertex_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse vertex"))));
+                    let vertex_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a vertex after V")));
+                    value[2] = try!(vertex_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse vertex"))));
 
                     vertecies.push(value);
                 }
@@ -54,14 +60,14 @@ impl ObjLoader{
                     trace!("Found normal");
                     let mut value = [0.0; 3];
 
-                    let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
-                    value[0] = try!(normal_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse normal"))));
+                    let normal_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a normal after V")));
+                    value[0] = try!(normal_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse normal"))));
 
-                    let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
-                    value[1] = try!(normal_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse normal"))));
+                    let normal_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a normal after V")));
+                    value[1] = try!(normal_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse normal"))));
 
-                    let normal_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Missing a normal after V")));
-                    value[2] = try!(normal_word.parse::<f32>().or(Err(ObjError::InvalidFormat("Could not parse normal"))));
+                    let normal_word = try!(iter.next().ok_or(ResError::InvalidFormat("Missing a normal after V")));
+                    value[2] = try!(normal_word.parse::<f32>().or(Err(ResError::InvalidFormat("Could not parse normal"))));
 
                     normals.push(value);
 
@@ -69,7 +75,7 @@ impl ObjLoader{
                 "f" => {
                     trace!("Found index");
                     if format == IndexFormat::NotTested{
-                        let test_word = try!(iter.peek().ok_or(ObjError::InvalidFormat("could not get index"))).clone();
+                        let test_word = try!(iter.peek().ok_or(ResError::InvalidFormat("could not get index"))).clone();
                         let format_split: Vec<&str> = test_word.split("/").collect();
                         debug!("Split found {} words", format_split.len());
                         if format_split.len() < 3 || format_split[2] == ""{
@@ -86,29 +92,29 @@ impl ObjLoader{
                     match format{
                         IndexFormat::Normal => {
                             for _ in 0..3{
-                                let index_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Could not get index")));
+                                let index_word = try!(iter.next().ok_or(ResError::InvalidFormat("Could not get index")));
                                 let index_w: String = index_word.chars().filter(|a|{ a != &'/' }).collect();//remove posible trailing /
-                                let value = try!(index_w.parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))));
+                                let value = try!(index_w.parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))));
                                 index.push(value-1);
                             }
                         }
                         IndexFormat::VTN => {
                             for _ in 0..3{
-                                let index_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Could not get index")));
+                                let index_word = try!(iter.next().ok_or(ResError::InvalidFormat("Could not get index")));
                                 let index_w:Vec<_> = index_word.split('/').collect();
-                                if index_w.len() < 3 { return Err(ObjError::InvalidFormat("Index missing index value")); }
-                                index.push(try!(index_w[0].parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))))-1);
-                                index_texture.push(try!(index_w[1].parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))))-1);
-                                index_normal.push(try!(index_w[2].parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))))-1);
+                                if index_w.len() < 3 { return Err(ResError::InvalidFormat("Index missing index value")); }
+                                index.push(try!(index_w[0].parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))))-1);
+                                index_texture.push(try!(index_w[1].parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))))-1);
+                                index_normal.push(try!(index_w[2].parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))))-1);
                             }
                         }
                         IndexFormat::VNullN => {
                             for _ in 0..3{
-                                let index_word = try!(iter.next().ok_or(ObjError::InvalidFormat("Could not get index")));
+                                let index_word = try!(iter.next().ok_or(ResError::InvalidFormat("Could not get index")));
                                 let index_w: Vec<_> = index_word.split('/').collect();
-                                if index_w.len() < 3 { return Err(ObjError::InvalidFormat("Could not parse index")); }
-                                index.push(try!(index_w[0].parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))))-1);
-                                index_normal.push(try!(index_w[2].parse::<u16>().or(Err(ObjError::InvalidFormat("Could not parse index"))))-1);
+                                if index_w.len() < 3 { return Err(ResError::InvalidFormat("Could not parse index")); }
+                                index.push(try!(index_w[0].parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))))-1);
+                                index_normal.push(try!(index_w[2].parse::<u32>().or(Err(ResError::InvalidFormat("Could not parse index"))))-1);
                             }
                         }
                         _ => unreachable!()
@@ -149,14 +155,15 @@ impl ObjLoader{
 
         let mut vertex_res = Vec::with_capacity(vertecies.len());
         for i in 0..vertecies.len(){
-            vertex_res.push(mesh::MeshVertex{
-                position: vertecies[i],
+            vertex_res.push(format::Vertex{
+                pos: vertecies[i],
                 normal: normals[i],
             });
         }
-        Ok(mesh::Mesh{
+        Ok(format::Mesh{
             vertecies: vertex_res,
-            index: index,
+            amount: index.len(),
+            indecies: index,
         })
     }
 }
