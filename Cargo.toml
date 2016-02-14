@@ -2,9 +2,15 @@
 name = "engine3d"
 version = "0.2.0"
 authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+build = "build.rs"
+
+[build-dependencies]
+serde_codegen = "*"
+syntex = "*"
 
 [dependencies]
-glium = "*"
+gfx = "*"
+glutin = "*"
 log = "*" 
 image = "*"
 time = "0.1"
