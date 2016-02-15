@@ -1,12 +1,7 @@
 [package]
-name = "engine3d"
-version = "0.2.0"
-authors = ["DelSkayn <yoko.minsky@gmail.com>"]
-build = "build.rs"
-
-[build-dependencies]
-serde_codegen = "*"
-syntex = "*"
+name = "tungsten"
+version = "0.0.1"
+authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
 gfx = "*"
