@@ -4,21 +4,13 @@ use self::tungsten::Game;
 
 struct TestGame;
 
-impl<'a> Game<'a> for TestGame<'a>{
+impl Game for TestGame{
 
-    fn new(_data: &'a mut GameData) -> Self<'a>{
+    fn new() -> Self{
         TestGame
     }
-
-    fn update(){
-    };
-
-    fn render(){
-    };
-    fn init(){
-    };
 }
 
 fn main(){
-    tungsten::TungEngine::<TestGame>::Go();
+    tungsten::Engine::go::<TestGame>();
 }
