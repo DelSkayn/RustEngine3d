@@ -29,7 +29,7 @@ pub struct Schedular{
 }
 
 impl Schedular{
-    pub fn new(num_cpus: usize) -> Self{
+    pub fn new() -> Self{
         Schedular{
             jobs: Vec::new(),
         }

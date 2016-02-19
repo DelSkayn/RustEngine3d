@@ -31,11 +31,11 @@ impl super::log_ext::Log for SimpleLogger{
     fn log(&self, record: &LogRecord){
         if self.enabled(record.metadata()){
             if record.metadata().level() <= LogLevel::Debug{
-                println!("[{}]|{}|{}",time::now().strftime("%T").unwrap()
+                println!("[{}]|{}| {}",time::now().strftime("%T").unwrap()
                          ,record.level()
                          ,record.args());
             }else{
-                println!("|{}|{}",record.level()
+                println!("|{}| {}",record.level()
                          ,record.args());
             }
         }

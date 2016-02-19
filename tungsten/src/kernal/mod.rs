@@ -11,8 +11,11 @@ extern crate num_cpus;
 use super::Root;
 use super::Game;
 
-use super::schedular::Schedular;
+mod schedular;
+pub use self::schedular::Schedular;
 
+mod thread_manager;
+use self::thread_manager::ThreadManager;
 
 pub trait System{
     fn run(&mut self,schedular: &mut Schedular);
@@ -24,6 +27,7 @@ pub struct Kernal<'a,G: Game + 'a>{
     cpus: usize,
     systems: Vec<Box<System>>,
     schedular: Schedular,
+    thread_manager: ThreadManager,
     running: bool,
 }
 
@@ -36,7 +40,8 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
             root: root,
             cpus: num_cpus,
             systems: Vec::new(),
-            schedular: Schedular::new(num_cpus),
+            schedular: Schedular::new(),
+            thread_manager: ThreadManager::new(num_cpus),
             running: true,
         }
     }
@@ -51,6 +56,7 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
             for sys in &mut self.systems{
                 sys.run(&mut self.schedular);
             }
+            self.running = false;
         }
     }
 
