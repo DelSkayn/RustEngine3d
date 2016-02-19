@@ -1,10 +1,11 @@
 [package]
-name = "engine3d"
-version = "0.2.0"
-authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+name = "tungsten"
+version = "0.0.1"
+authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
-glium = "*"
+gfx = "*"
+glutin = "*"
 log = "*" 
 image = "*"
 time = "0.1"
