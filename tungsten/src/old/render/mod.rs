@@ -111,6 +111,7 @@ impl From<index::BufferCreationError> for BufferError{
 
 #[derive(Debug)]
 pub enum ShaderCreationError{
+    BinaryHeaderError,
     CompilationError(String),
     LinkingError(String),
     ShaderTypeNotSupported,
@@ -122,6 +123,7 @@ pub enum ShaderCreationError{
 impl From<program::ProgramCreationError> for ShaderCreationError{
     fn from(err: program::ProgramCreationError) -> Self{
         match err {
+            program::ProgramCreationError::BinaryHeaderError => ShaderCreationError::BinaryHeaderError,
             program::ProgramCreationError::CompilationError(x) => ShaderCreationError::CompilationError(x),
             program::ProgramCreationError::LinkingError(x) => ShaderCreationError::LinkingError(x),
             program::ProgramCreationError::ShaderTypeNotSupported => ShaderCreationError::ShaderTypeNotSupported,
