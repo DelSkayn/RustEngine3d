@@ -12,7 +12,7 @@ impl JobId{
     }
 }
 
-pub trait Job{
+pub trait Job: Send + Sync{
     fn execute(&mut self) -> Result<(),JobError>;
 
     fn after(&self) -> Option<JobId>{
@@ -23,6 +23,15 @@ pub trait Job{
         None
     }
 }
+
+struct NullJob;
+
+impl Job for NullJob{
+    fn execute(&mut self) -> Result<(), JobError>{
+        Ok(())
+    }
+}
+
 
 pub struct Schedular{
     jobs: Vec<Box<Job>>,

@@ -4,8 +4,8 @@
 
 #[macro_use]
 extern crate log as log_ext;
-
 extern crate time;
+extern crate crossbeam;
 
 mod log;
 use log::SimpleLogger;

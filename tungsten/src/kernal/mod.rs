@@ -41,7 +41,7 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
             cpus: num_cpus,
             systems: Vec::new(),
             schedular: Schedular::new(),
-            thread_manager: ThreadManager::new(num_cpus),
+            thread_manager: ThreadManager::new(),
             running: true,
         }
     }
@@ -52,11 +52,11 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
     }
 
     pub fn run(&mut self){
+        self.thread_manager.create(self.cpus);
         while self.running {
             for sys in &mut self.systems{
                 sys.run(&mut self.schedular);
             }
-            self.running = false;
         }
     }
 

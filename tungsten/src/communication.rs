@@ -1,4 +1,6 @@
 
+use crossbeam::sync::TreiberStack;
+
 use super::event_queue::EventQueue;
 
 pub struct Communication{
