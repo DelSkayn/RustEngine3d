@@ -1,4 +1,6 @@
+use super::thread_manager::ThreadManager;
 
+#[derive(Debug)]
 pub enum JobError{
     Failed(&'static str)
 }
@@ -44,7 +46,14 @@ impl Schedular{
         }
     }
 
-    pub fn add_job(&mut self,_job: Box<Job>){
-        unimplemented!();
+    pub fn add_job(&mut self,job: Box<Job>){
+        self.jobs.push(job);
+    }
+
+    pub fn flush(&mut self,threads: &mut ThreadManager){
+        for j in self.jobs.drain(..){
+            threads.add_job(j);
+        }
+        threads.wake();
     }
 }

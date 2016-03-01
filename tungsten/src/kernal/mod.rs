@@ -23,16 +23,15 @@ pub trait System{
 
 
 pub struct Kernal<'a,G: Game + 'a>{
-    root: &'a mut Root<G>,
+    root: &'a Root<G>,
     cpus: usize,
     systems: Vec<Box<System>>,
-    schedular: Schedular,
     thread_manager: ThreadManager,
     running: bool,
 }
 
 impl<'a,G: Game + 'a> Kernal<'a,G>{
-    pub fn new(root: &'a mut Root<G>) -> Self{
+    pub fn new(root: &'a Root<G>) -> Self{
         info!("Kernal Created.");
         let num_cpus = num_cpus::get();
         info!("Found {} cores.",num_cpus);
@@ -40,7 +39,6 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
             root: root,
             cpus: num_cpus,
             systems: Vec::new(),
-            schedular: Schedular::new(),
             thread_manager: ThreadManager::new(),
             running: true,
         }
@@ -48,19 +46,70 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
 
     pub fn add_system(&mut self,sys: Box<System>){
         self.systems.push(sys);
-        self.systems.shrink_to_fit();
     }
 
     pub fn run(&mut self){
+        self.systems.shrink_to_fit();
         self.thread_manager.create(self.cpus);
         while self.running {
+            println!("Systems");
+            self.running = false;
             for sys in &mut self.systems{
-                sys.run(&mut self.schedular);
+                let mut schedular = Schedular::new();
+                sys.run(&mut schedular);
+                schedular.flush(&mut self.thread_manager);
             }
         }
     }
 
     pub fn quit(&mut self){
         self.running = false;
+    }
+}
+
+#[cfg(test)]
+mod test{
+    use super::*;
+    use super::schedular::Job;
+    use super::schedular::JobError;
+    use super::super::game::Game;
+    use super::super::Root;
+
+    struct HelloWorld;
+    struct HelloJob{
+        test: u64,
+    }
+    struct HelloGame;
+
+    impl Job for HelloJob{
+        fn execute(&mut self) -> Result<(),JobError>{
+            println!("Hello world: {}",self.test);
+            Ok(())
+        }
+    }
+
+    impl System for HelloWorld{
+        fn run(&mut self,sched: &mut Schedular){
+            for i in 0..10{
+                sched.add_job(Box::new(HelloJob{
+                    test:i,
+                }));
+            }
+        }
+    }
+    
+    impl Game for HelloGame{
+        fn new() -> Self{
+            HelloGame
+        }
+    }
+
+    #[test]
+    fn kernal(){
+        let root = Root::<HelloGame>::new();
+        let mut kernal = Kernal::new(&root);
+        kernal.add_system(Box::<HelloWorld>::new(HelloWorld));
+        println!("Running");
+        kernal.run();
     }
 }

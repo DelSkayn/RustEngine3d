@@ -1,23 +1,37 @@
 use std::thread::JoinHandle;
-use std::thread::Builder;
 use std::thread;
 
-use std::sync::mpsc::*;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use super::schedular::Job;
+use super::schedular::JobError;
 
-use std::sync::Arc;
+use crossbeam::sync::MsQueue;
 
-use super::super::crossbeam::sync::TreiberStack;
+
+struct NullJob;
+
+impl Job for NullJob{
+    fn execute(&mut self) -> Result<(),JobError>{
+        Ok(())
+    }
+}
 
 struct Thread{
-    job_queue: *const TreiberStack<Box<Job>>,
+    id: u8,
+    running: Arc<AtomicBool>,
+    job_queue: Arc<MsQueue<Box<Job>>>,
 }
 
 impl Thread{
     fn run(&mut self){
-        thread::park();
+        println!("Thread running");
+        while self.running.load(Ordering::Relaxed){
+            let mut x = self.job_queue.pop();
+            x.execute().unwrap();
+        }
     }
 }
 
@@ -26,42 +40,56 @@ struct ThreadData{
 }
 
 pub struct ThreadManager{
+    running: Arc<AtomicBool>,
     threads: Vec<ThreadData>,
-    job_queue: TreiberStack<Box<Job>>,
+    pub job_queue: Arc<MsQueue<Box<Job>>>,
 }
 
 impl ThreadManager{
     pub fn new() -> Self{
         ThreadManager{
+            running: Arc::new(AtomicBool::new(true)),
             threads: Vec::new(),
-            job_queue: TreiberStack::new(),
+            job_queue: Arc::new(MsQueue::new()),
         }
     }
 
-    pub fn create(&mut self,amount: usize){
-        let raw = (&self.job_queue) as *const TreiberStack<Box<Job>>;
-        for _ in 0..amount{
-            self.threads.push(
-                ThreadData{
-                    join: Builder::new()
-                        .name("Tungsten Worker Thread".to_string())
-                        .spawn(move||{
-                            let mut thread;
-                            unsafe{
-                                thread = Thread{
-                                    job_queue: raw,
-                                };
-                            }
-                            thread.run();
-                        })
-                    .expect("Could not create thread"),
-                });
+    pub fn create<'a>(&'a mut self,amount: usize){
+        for i in 0..amount{
+            let running = self.running.clone();
+            let job_que = self.job_queue.clone();
+            let data  = ThreadData{
+                join: thread::spawn(move ||{
+                    let mut thread;
+                    thread = Thread{
+                        id: i as u8,
+                        running: running,
+                        job_queue: job_que,
+                    };
+                    thread.run();
+                }),
+            };
+            self.threads.push(data);
+        }
+    }
+
+    pub fn add_job(&self, job: Box<Job>){
+        println!("Job added");
+        self.job_queue.push(job);
+    }
+
+    pub fn wake(&self){
+        for _ in &self.threads{
         }
     }
 }
 
 impl Drop for ThreadManager{
     fn drop(&mut self){
+        self.running.store(false,Ordering::Relaxed);
+        for _ in 0..self.threads.len(){
+            self.job_queue.push(Box::new(NullJob));
+        }
         for t in &self.threads{
             t.join.thread().unpark();
         }
