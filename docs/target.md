@@ -1,4 +1,5 @@
-# Target
+Target
+======
 
 My engine targets a specific platform: PC.
 
@@ -8,6 +9,7 @@ My engine targets a specific platform: PC.
 * Opengl 3.3 Compliant Gpus
 * 4gb Mem
 * Linux/Windows/Mac
+* 4+ cores.
 
 ## Resulting Code Choises
 
