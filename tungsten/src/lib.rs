@@ -22,9 +22,6 @@ pub use event::Event;
 mod kernal;
 use kernal::Kernal;
 
-mod communication;
-pub use communication::Communication;
-
 mod event_queue;
 
 pub struct Engine;

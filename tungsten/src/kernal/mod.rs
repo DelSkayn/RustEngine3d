@@ -11,6 +11,8 @@ extern crate num_cpus;
 use super::Root;
 use super::Game;
 
+use std::sync::atomic::Ordering;
+
 mod schedular;
 pub use self::schedular::Schedular;
 
@@ -27,7 +29,6 @@ pub struct Kernal<'a,G: Game + 'a>{
     cpus: usize,
     systems: Vec<Box<System>>,
     thread_manager: ThreadManager,
-    running: bool,
 }
 
 impl<'a,G: Game + 'a> Kernal<'a,G>{
@@ -40,7 +41,6 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
             cpus: num_cpus,
             systems: Vec::new(),
             thread_manager: ThreadManager::new(),
-            running: true,
         }
     }
 
@@ -51,19 +51,16 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
         self.thread_manager.create(self.cpus);
-        while self.running {
-            println!("Systems");
-            self.running = false;
+        //Game loop
+        while self.root.running.load(Ordering::Relaxed){
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
                 sys.run(&mut schedular);
                 schedular.flush(&mut self.thread_manager);
             }
+            trace!("Frame end");
         }
-    }
-
-    pub fn quit(&mut self){
-        self.running = false;
+        //end loop
     }
 }
 
