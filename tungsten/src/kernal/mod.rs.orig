@@ -46,9 +46,15 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
 
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
-        self.thread_manager.create(self.root.platform.cores);
+<<<<<<< HEAD
+        self.thread_manager.create(self.cpus);
         //Game loop
         while self.root.running.load(Ordering::Relaxed){
+=======
+        self.thread_manager.create(self.root.platform.cores);
+        while self.running {
+            self.running = false;
+>>>>>>> dcdbc1b6a06ce4fe05f28a8b96af0e7af896664b
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
                 sys.run(&mut schedular);

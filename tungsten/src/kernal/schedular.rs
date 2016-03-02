@@ -2,7 +2,8 @@ use super::thread_manager::ThreadManager;
 
 #[derive(Debug)]
 pub enum JobError{
-    Failed(&'static str)
+    Failed(&'static str),
+    Quiting,
 }
 
 #[derive(PartialEq)]
@@ -54,6 +55,5 @@ impl Schedular{
         for j in self.jobs.drain(..){
             threads.add_job(j);
         }
-        threads.wake();
     }
 }

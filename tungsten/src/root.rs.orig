@@ -1,12 +1,20 @@
 use std::sync::atomic::AtomicBool;
 
 use super::Game;
+<<<<<<< HEAD
+
+pub struct Root<G: Game + ?Sized>{
+    pub game: G,
+    pub running: AtomicBool,
+=======
+use super::Communication;
 use super::Platform;
 
 pub struct Root<G: Game + ?Sized>{
-    pub platform: Platform,
     pub game: G,
-    pub running: AtomicBool,
+    pub platform: Platform,
+    pub comms: Communication,
+>>>>>>> dcdbc1b6a06ce4fe05f28a8b96af0e7af896664b
 }
 
 impl<G: Game + ?Sized> Root<G>{
@@ -15,7 +23,11 @@ impl<G: Game + ?Sized> Root<G>{
         Root{
             running: AtomicBool::new(true),
             game: G::new(),
+<<<<<<< HEAD
+=======
             platform: Platform::new(),
+            comms: Communication::new(),
+>>>>>>> dcdbc1b6a06ce4fe05f28a8b96af0e7af896664b
         }
     }
 }
