@@ -4,13 +4,9 @@ use self::tungsten::Game;
 
 struct TestGame;
 
-impl Game for TestGame{
+impl Game for TestGame{}
 
-    fn new() -> Self{
-        TestGame
-    }
-}
 
 fn main(){
-    tungsten::Engine::go::<TestGame>();
+    tungsten::Engine::go(TestGame);
 }

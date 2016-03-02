@@ -1,5 +1,4 @@
-pub trait Game: Sized{
-    fn new() -> Self;
+pub trait Game{
 
     fn update(&mut self){}
     fn render(&mut self){}

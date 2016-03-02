@@ -19,18 +19,24 @@ pub use root::Root;
 mod platform;
 pub use platform::Platform;
 
+mod settings;
+pub use settings::Settings;
+
 mod event;
 pub use event::Event;
 
 mod kernal;
 use kernal::Kernal;
 
+mod window;
+use window::WindowSystem;
+
 mod event_queue;
 
 pub struct Engine;
 
 impl Engine{
-    pub fn go<G: Game>(){
+    pub fn go<G: Game + 'static>(game: G){
         println!("--------------------------------------------------------------------------");
         println!(r#"   ______                                        __                       
   /\__  _\                                      /\ \__                    
@@ -44,8 +50,10 @@ impl Engine{
         println!("--------------------------------------------------------------------------");
         println!("Tungsten starting!");
         SimpleLogger::init().unwrap();
-        let mut root = Root::<G>::new();
+        let mut root = Root::new(game);
+        let window = WindowSystem::new(&root);
         let mut kernal = Kernal::new(&mut root);
+        kernal.add_system(Box::new(window));
         kernal.run();
         info!("Engine closed.");
     }

@@ -8,9 +8,6 @@
 
 
 use super::Root;
-use super::Game;
-
-use std::sync::atomic::Ordering;
 
 mod schedular;
 pub use self::schedular::Schedular;
@@ -20,18 +17,18 @@ use self::thread_manager::ThreadManager;
 
 
 pub trait System{
-    fn run(&mut self,schedular: &mut Schedular);
+    fn run(&mut self,root: &Root,schedular: &mut Schedular);
 }
 
 
-pub struct Kernal<'a,G: Game + 'a>{
-    root: &'a Root<G>,
+pub struct Kernal<'a>{
+    root: &'a Root,
     systems: Vec<Box<System>>,
     thread_manager: ThreadManager,
 }
 
-impl<'a,G: Game + 'a> Kernal<'a,G>{
-    pub fn new(root: &'a Root<G>) -> Self{
+impl<'a> Kernal<'a>{
+    pub fn new(root: &'a Root) -> Self{
         info!("Kernal Created.");
         Kernal{
             root: root,
@@ -48,10 +45,10 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
         self.systems.shrink_to_fit();
         self.thread_manager.create(self.root.platform.cores);
         //Game loop
-        while self.root.running.load(Ordering::Relaxed){
+        while self.root.running.should(){
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
-                sys.run(&mut schedular);
+                sys.run(self.root,&mut schedular);
                 schedular.flush(&mut self.thread_manager);
             }
             trace!("Frame end");
@@ -67,12 +64,15 @@ mod test{
     use super::schedular::JobError;
     use super::super::game::Game;
     use super::super::Root;
+    use std::sync::atomic::Ordering;
 
     struct HelloWorld;
     struct HelloJob{
         test: u64,
     }
     struct HelloGame;
+    
+    impl Game for HelloGame{}
 
     impl Job for HelloJob{
         fn execute(&mut self) -> Result<(),JobError>{
@@ -82,24 +82,19 @@ mod test{
     }
 
     impl System for HelloWorld{
-        fn run(&mut self,sched: &mut Schedular){
+        fn run(&mut self,root: &Root,sched: &mut Schedular){
             for i in 0..10{
                 sched.add_job(Box::new(HelloJob{
                     test:i,
                 }));
             }
+            root.running.quit();
         }
     }
     
-    impl Game for HelloGame{
-        fn new() -> Self{
-            HelloGame
-        }
-    }
-
     #[test]
     fn kernal_hello(){
-        let root = Root::<HelloGame>::new();
+        let root = Root::new(HelloGame);
         let mut kernal = Kernal::new(&root);
         kernal.add_system(Box::<HelloWorld>::new(HelloWorld));
         println!("Running");
@@ -140,18 +135,19 @@ mod test{
     }
 
     impl System for FibboWorld{
-        fn run(&mut self,sched: &mut Schedular){
+        fn run(&mut self,root: &Root,sched: &mut Schedular){
             for i in 20..44{
                 sched.add_job(Box::new(FibboJob{
                     test:i,
                 }));
             }
+            root.running.quit();
         }
     }
 
     #[test]
     fn kernal_work(){
-        let root = Root::<HelloGame>::new();
+        let root = Root::new(HelloGame);
         let mut kernal = Kernal::new(&root);
         kernal.add_system(Box::new(FibboWorld));
         println!("Running");

@@ -21,6 +21,9 @@ impl Job for QuitJob{
 
 struct Thread{
     id: u8,
+    //might need to switch this to a work steal
+    //cycle if performance is bad.
+    //Dont think it will be much of an isue
     job_queue: Arc<MsQueue<Box<Job>>>,
 }
 
@@ -31,7 +34,7 @@ impl Thread{
             //FIXME handle more errors
             match job.execute(){
                 Err(JobError::Quiting) => {break 'main;},
-                _ => {},
+                _ => {unimplemented!()},
             }
         }
     }
@@ -80,9 +83,6 @@ impl Drop for ThreadManager{
     fn drop(&mut self){
         for _ in 0..self.threads.len(){
             self.job_queue.push(Box::new(QuitJob));
-        }
-        for t in &self.threads{
-            t.join.thread().unpark();
         }
         for t in self.threads.drain(..){
             t.join.join().expect("Error while joining thread");
