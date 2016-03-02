@@ -16,6 +16,9 @@ pub use game::Game;
 mod root;
 pub use root::Root;
 
+mod platform;
+pub use platform::Platform;
+
 mod event;
 pub use event::Event;
 

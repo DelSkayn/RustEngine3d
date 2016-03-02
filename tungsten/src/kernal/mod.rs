@@ -6,7 +6,6 @@
 //! This is where the systems live.
 //!
 
-extern crate num_cpus;
 
 use super::Root;
 use super::Game;
@@ -17,6 +16,7 @@ pub use self::schedular::Schedular;
 mod thread_manager;
 use self::thread_manager::ThreadManager;
 
+
 pub trait System{
     fn run(&mut self,schedular: &mut Schedular);
 }
@@ -24,7 +24,6 @@ pub trait System{
 
 pub struct Kernal<'a,G: Game + 'a>{
     root: &'a Root<G>,
-    cpus: usize,
     systems: Vec<Box<System>>,
     thread_manager: ThreadManager,
     running: bool,
@@ -33,11 +32,8 @@ pub struct Kernal<'a,G: Game + 'a>{
 impl<'a,G: Game + 'a> Kernal<'a,G>{
     pub fn new(root: &'a Root<G>) -> Self{
         info!("Kernal Created.");
-        let num_cpus = num_cpus::get();
-        info!("Found {} cores.",num_cpus);
         Kernal{
             root: root,
-            cpus: num_cpus,
             systems: Vec::new(),
             thread_manager: ThreadManager::new(),
             running: true,
@@ -50,9 +46,8 @@ impl<'a,G: Game + 'a> Kernal<'a,G>{
 
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
-        self.thread_manager.create(self.cpus);
+        self.thread_manager.create(self.root.platform.cores);
         while self.running {
-            println!("Systems");
             self.running = false;
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
@@ -105,10 +100,62 @@ mod test{
     }
 
     #[test]
-    fn kernal(){
+    fn kernal_hello(){
         let root = Root::<HelloGame>::new();
         let mut kernal = Kernal::new(&root);
         kernal.add_system(Box::<HelloWorld>::new(HelloWorld));
+        println!("Running");
+        kernal.run();
+    }
+
+    fn fibbo(num: u64) -> u64{
+        match num{
+            0 => 1,
+            1 => 1,
+            x => fibbo(x-1) + fibbo(x -2),
+        }
+        /*
+        if num == 0 || num == 1{
+            1
+        }else{
+            let mut first = 1;
+            let mut second = 1;
+            for i in 2..num+1{
+                let new = first + second;
+                first = second;
+                second = new;
+            }
+            second
+        }
+        */
+    }
+
+    struct FibboWorld;
+    struct FibboJob{
+        test: u64,
+    }
+    impl Job for FibboJob{
+        fn execute(&mut self) -> Result<(),JobError>{
+            println!("fibbo,{} = {}",self.test,fibbo(self.test));
+            Ok(())
+        }
+    }
+
+    impl System for FibboWorld{
+        fn run(&mut self,sched: &mut Schedular){
+            for i in 20..44{
+                sched.add_job(Box::new(FibboJob{
+                    test:i,
+                }));
+            }
+        }
+    }
+
+    #[test]
+    fn kernal_work(){
+        let root = Root::<HelloGame>::new();
+        let mut kernal = Kernal::new(&root);
+        kernal.add_system(Box::new(FibboWorld));
         println!("Running");
         kernal.run();
     }
