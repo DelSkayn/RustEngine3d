@@ -7,7 +7,6 @@ authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 gfx = "*"
 glutin = "*"
 log = "*" 
-image = "*"
 time = "0.1"
 num_cpus = "*"
 crossbeam = "*"

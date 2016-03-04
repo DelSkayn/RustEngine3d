@@ -15,6 +15,7 @@ pub use game::Game;
 
 mod root;
 pub use root::Root;
+pub use root::AtomicOption;
 
 mod platform;
 pub use platform::Platform;
@@ -26,10 +27,16 @@ mod event;
 pub use event::Event;
 
 mod kernal;
+pub use kernal::System;
+pub use kernal::Schedular;
+pub use kernal::Job;
 use kernal::Kernal;
 
 mod window;
 use window::WindowSystem;
+
+mod render;
+use render::RenderSystem;
 
 mod event_queue;
 

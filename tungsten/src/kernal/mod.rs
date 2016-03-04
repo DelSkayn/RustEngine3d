@@ -11,6 +11,8 @@ use super::Root;
 
 mod schedular;
 pub use self::schedular::Schedular;
+pub use self::schedular::Job;
+pub use self::schedular::JobError;
 
 mod thread_manager;
 use self::thread_manager::ThreadManager;
