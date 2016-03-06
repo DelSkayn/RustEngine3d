@@ -12,13 +12,16 @@ pub enum OperatingSystem{
     Other,
 }
 
+/// Struct containing data about the platform the engine is running on
 pub struct Platform{
+    /// The current operating system
     pub os: OperatingSystem,
+    /// Amount of cpu cores, Physical and logical(?).
     pub cores: usize,
 }
 
 impl Platform{
-
+    /// Creates a new platform.
     pub fn new() -> Self{
         let os =
         if cfg!(target_os = "linux"){

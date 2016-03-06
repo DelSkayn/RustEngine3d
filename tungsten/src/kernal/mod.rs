@@ -1,11 +1,3 @@
-//!
-//! The Kernal
-//!
-//! The heart of the game engine.
-//! This is where the blood of cpu time is pumped through the engine.
-//! This is where the systems live.
-//!
-
 
 use super::Root;
 
@@ -17,12 +9,14 @@ pub use self::schedular::JobError;
 mod thread_manager;
 use self::thread_manager::ThreadManager;
 
-
+/// A trait for object which can create jobs.
 pub trait System{
+    /// A function called when the system needs to run.
     fn run(&mut self,root: &Root,schedular: &mut Schedular);
 }
 
-
+/// The heart of the engine, the kernal keeps the engine running 
+/// and manages all the jobs.
 pub struct Kernal<'a>{
     root: &'a Root,
     systems: Vec<Box<System>>,

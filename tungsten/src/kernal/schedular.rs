@@ -15,13 +15,16 @@ impl JobId{
     }
 }
 
+/// A trait for objects which can be executed as 
+/// jobs on threads.
 pub trait Job: Send + Sync{
+    /// Executed when the job needs to be run.
+    /// Can fail.
     fn execute(&mut self) -> Result<(),JobError>;
 
-    fn after(&self) -> Option<JobId>{
-        None
-    }
-
+    /// Retruns if there needs to be a job executed after this one is 
+    /// finished.
+    /// WARN: Possible removed.
     fn next(&mut self) -> Option<Box<Job>>{
         None
     }
@@ -35,22 +38,27 @@ impl Job for NullJob{
     }
 }
 
-
+/// Struct used for scheduling jobs.
 pub struct Schedular{
     jobs: Vec<Box<Job>>,
 }
 
 impl Schedular{
+    /// returns a new schedular.
     pub fn new() -> Self{
         Schedular{
             jobs: Vec::new(),
         }
     }
 
+    /// Adds a job to be scheduled.
     pub fn add_job(&mut self,job: Box<Job>){
         self.jobs.push(job);
     }
 
+    /// Flushes all the jobs to a ThreadManager.
+    /// HIGHLY TEMP.
+    /// Not stable interface.
     pub fn flush(&mut self,threads: &mut ThreadManager){
         for j in self.jobs.drain(..){
             threads.add_job(j);

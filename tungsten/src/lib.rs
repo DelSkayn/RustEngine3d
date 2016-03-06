@@ -7,7 +7,12 @@
 #![crate_name = "tungsten"]
 #![crate_type = "lib"]
 #![allow(dead_code)]
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
+
+//uuhhhh
+//I hate that it needs to be declared here.
+#[macro_use]
+extern crate gfx;
 
 #[macro_use]
 extern crate log as log_ext;
@@ -30,8 +35,8 @@ pub use platform::Platform;
 mod settings;
 pub use settings::Settings;
 
-mod event;
-pub use event::Event;
+//mod event;
+//pub use event::Event;
 
 mod kernal;
 pub use kernal::System;
@@ -44,8 +49,9 @@ use window::WindowSystem;
 
 mod render;
 use render::RenderSystem;
+use render::GfxRenderer;
 
-mod event_queue;
+//mod event_queue;
 
 pub struct Engine;
 
@@ -65,9 +71,12 @@ impl Engine{
         println!("Tungsten starting!");
         SimpleLogger::init().unwrap();
         let mut root = Root::new(game);
-        let window = WindowSystem::new(&root);
+        let (window,device,factory) = WindowSystem::new(&root);
+        let renderer = GfxRenderer::new(device,factory);
+        let render_sys = RenderSystem::new(renderer);
         let mut kernal = Kernal::new(&mut root);
         kernal.add_system(Box::new(window));
+        kernal.add_system(Box::new(render_sys));
         kernal.run();
         info!("Engine closed.");
     }

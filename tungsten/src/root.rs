@@ -17,10 +17,15 @@ use super::render::RenderRoot;
 ///internaly mutable.
 ///
 pub struct Root{
+    /// Information about the platform the engine is running on.
     pub platform: Platform,
+    /// Object of the game the engine is running.
     pub game: Box<Game>,
+    /// An object used to determin if the object should continue running.
     pub running: Running, 
+    /// Settings of versious things in the engine
     pub settings: Settings,
+    /// Data used by rendering engine and everyone who needs to submit renderdata.
     pub render: RenderRoot,
 }
 
@@ -33,6 +38,7 @@ pub struct AtomicOption<T>
 }
 
 impl<T: Sized> AtomicOption<T>{
+    ///Creates a new AtomicOption
     pub fn new() -> Self{
         AtomicOption{
             inner: AtomicPtr::new(ptr::null_mut()),
@@ -48,21 +54,28 @@ impl<T: Sized> AtomicOption<T>{
         }
     }
 
+    /// Returns wether there is no value in the option.
     pub fn is_none(&self,ord: Ordering) -> bool{
         self.inner.load(ord) == ptr::null_mut()
     }
 
+    /// Returns wether there is some value in the option.
     pub fn is_some(&self,ord: Ordering) -> bool{
         self.inner.load(ord) != ptr::null_mut()
     }
 
+    /// Returns the value (some or none) and places none in the option.
     pub fn take(&self,ord: Ordering) -> Option<T>{
         self.swap_inner(ptr::null_mut(),ord).map(|ptr| *ptr)
     }
 
+    /// Returns the value (some or none) and places none in the option.
+    /// Can reuse allocation.
     pub fn swap_box(&self,value: Box<T>,ord: Ordering) -> Option<Box<T>>{
         self.swap_inner(Box::into_raw(value),ord)
     }
+
+    /// places value given into the option and returns the current.
     pub fn swap(&self,value: T,ord: Ordering) -> Option<T>{
         let b = Box::new(value);
         self.swap_inner(Box::into_raw(b),ord).map(|ptr| *ptr)
@@ -91,6 +104,7 @@ impl Running{
 }
 
 impl Root{
+    /// creates a new root.
     pub fn new<G: Game + Sized + 'static>(game: G) -> Self{
         info!("Root created.");
         Root{

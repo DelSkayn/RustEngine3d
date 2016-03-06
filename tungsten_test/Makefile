@@ -1,5 +1,7 @@
 all:
 	cargo build
+run:
+	cargo run
 rebuild:
 	cargo clean
 	cargo build

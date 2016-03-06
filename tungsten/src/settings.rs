@@ -9,10 +9,12 @@
 /// seen in option menus.
 ///
 pub struct Settings{
+    /// Options for the graphic part of the engine.
     pub graphics: Graphics,
 }
 
 impl Settings{
+    /// Creates a new setting struct.
     pub fn new() -> Self{
         Settings{
             graphics: Default::default(),
@@ -20,6 +22,7 @@ impl Settings{
     }
 }
 
+/// struct containing options for the graphic part of the engine.
 pub struct Graphics{
     pub window_pos: [u32;2],
     pub window_size: [u32;2],
