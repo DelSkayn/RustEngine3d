@@ -29,7 +29,6 @@ impl WindowSystem{
 }
 
 impl System for WindowSystem{
-
     fn run(&mut self,root: &Root,_: &mut Schedular){
         for event  in self.internal.poll_events(){
             match event{

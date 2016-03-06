@@ -4,13 +4,12 @@ version = "0.0.1"
 authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
-gfx = "*"
 glutin = "*"
 log = "*" 
-image = "*"
 time = "0.1"
 num_cpus = "*"
 crossbeam = "*"
+vulkano = "*"
 
 [profile.dev]
 opt-level = 0
