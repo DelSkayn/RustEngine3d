@@ -10,6 +10,12 @@ use super::Settings;
 
 use super::render::RenderRoot;
 
+///
+///Root is a static data structure used throughout the engine
+///for communication. Root can only be referenced as constant.
+///So referies need to ensure that data can be accessed as 
+///internaly mutable.
+///
 pub struct Root{
     pub platform: Platform,
     pub game: Box<Game>,
@@ -18,6 +24,9 @@ pub struct Root{
     pub render: RenderRoot,
 }
 
+///
+///A structure for managing data on root. 
+///Can be used to take ownership of data asyncronisly
 pub struct AtomicOption<T>
     where T: Sized{
     inner: AtomicPtr<T>,

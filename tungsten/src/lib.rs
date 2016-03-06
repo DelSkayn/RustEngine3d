@@ -1,6 +1,13 @@
+//!
+//! Tungsten
+//! ========
+//!
+//! Tungsten is a game engine written as a future proof, game engine.
+//!
 #![crate_name = "tungsten"]
 #![crate_type = "lib"]
 #![allow(dead_code)]
+#![deny(missing_docs)]
 
 #[macro_use]
 extern crate log as log_ext;
