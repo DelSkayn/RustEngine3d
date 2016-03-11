@@ -51,6 +51,9 @@ mod render;
 use render::RenderSystem;
 use render::GfxRenderer;
 
+mod res;
+use res::ResourcesSystem;
+
 //mod event_queue;
 
 pub struct Engine;
@@ -72,7 +75,7 @@ impl Engine{
         SimpleLogger::init().unwrap();
         let mut root = Root::new(game);
         let (window,device,factory) = WindowSystem::new(&root);
-        let renderer = GfxRenderer::new(device,factory);
+        let renderer = GfxRenderer::new(device,factory,root.sync.settings.graphics.window_size);
         let render_sys = RenderSystem::new(renderer);
         let mut kernal = Kernal::new(&mut root);
         kernal.add_system(Box::new(window));

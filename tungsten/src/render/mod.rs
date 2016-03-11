@@ -6,6 +6,9 @@ use super::Schedular;
 mod gfx_renderer;
 pub use self::gfx_renderer::GfxRenderer;
 
+mod data;
+pub use self::data::*;
+
 pub struct RenderObject;
 
 pub struct RenderRoot{
@@ -22,6 +25,7 @@ impl RenderRoot{
 
 pub trait Renderer{
     fn render(&mut self);
+    fn load_mesh(&mut self,mesh: Mesh);
 }
 
 pub struct RenderSystem<R: Renderer>{

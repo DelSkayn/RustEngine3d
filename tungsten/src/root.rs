@@ -4,6 +4,8 @@ use std::sync::atomic::Ordering;
 
 use std::ptr;
 
+use std::marker::PhantomData;
+
 use super::Game;
 use super::Platform;
 use super::Settings;
@@ -17,31 +19,40 @@ use super::render::RenderRoot;
 ///internaly mutable.
 ///
 pub struct Root{
-    /// Information about the platform the engine is running on.
-    pub platform: Platform,
+    pub async: AsyncRoot,
+    pub sync: SyncRoot,
+}
+
+pub struct SyncRoot{
     /// Object of the game the engine is running.
     pub game: Box<Game>,
-    /// An object used to determin if the object should continue running.
-    pub running: Running, 
     /// Settings of versious things in the engine
     pub settings: Settings,
+}
+
+pub struct AsyncRoot{
+    /// Information about the platform the engine is running on.
+    pub platform: Platform,
     /// Data used by rendering engine and everyone who needs to submit renderdata.
     pub render: RenderRoot,
+    /// An object used to determin if the object should continue running.
+    pub running: Running, 
 }
 
 ///
 ///A structure for managing data on root. 
 ///Can be used to take ownership of data asyncronisly
-pub struct AtomicOption<T>
-    where T: Sized{
+pub struct AtomicOption<T>{
     inner: AtomicPtr<T>,
+    _marker: PhantomData<T>,
 }
 
-impl<T: Sized> AtomicOption<T>{
+impl<T> AtomicOption<T>{
     ///Creates a new AtomicOption
     pub fn new() -> Self{
         AtomicOption{
             inner: AtomicPtr::new(ptr::null_mut()),
+            _marker: PhantomData,
         }
     }
 
@@ -82,7 +93,6 @@ impl<T: Sized> AtomicOption<T>{
     }
 }
 
-
 pub struct Running{
     interal: AtomicBool,
 }
@@ -108,11 +118,15 @@ impl Root{
     pub fn new<G: Game + Sized + 'static>(game: G) -> Self{
         info!("Root created.");
         Root{
-            running: Running::new(),
-            game: Box::new(game),
-            platform: Platform::new(),
-            settings: Settings::new(),
-            render: RenderRoot::new(),
+            sync: SyncRoot{
+                game: Box::new(game),
+                settings: Settings::new(),
+            },
+            async: AsyncRoot{
+                platform: Platform::new(),
+                running: Running::new(),
+                render: RenderRoot::new(),
+            },
         }
     }
 }

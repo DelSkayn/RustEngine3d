@@ -47,6 +47,7 @@ struct ThreadData{
 pub struct ThreadManager{
     threads: Vec<ThreadData>,
     pub job_queue: Arc<MsQueue<Box<Job>>>,
+    pub notify: Arc<()>,
 }
 
 impl ThreadManager{
@@ -54,6 +55,7 @@ impl ThreadManager{
         ThreadManager{
             threads: Vec::new(),
             job_queue: Arc::new(MsQueue::new()),
+            notify: Arc::new(),
         }
     }
 

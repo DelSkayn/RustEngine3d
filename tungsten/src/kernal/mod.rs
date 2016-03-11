@@ -39,9 +39,9 @@ impl<'a> Kernal<'a>{
 
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
-        self.thread_manager.create(self.root.platform.cores);
+        self.thread_manager.create(self.root.async.platform.cores);
         //Game loop
-        while self.root.running.should(){
+        while self.root.async.running.should(){
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
                 sys.run(self.root,&mut schedular);

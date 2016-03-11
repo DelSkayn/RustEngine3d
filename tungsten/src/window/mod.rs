@@ -26,9 +26,9 @@ pub struct WindowSystem{
 impl WindowSystem{
     pub fn new(root: &Root) -> (Self,Device,Factory){
         let builder = WindowBuilder::new()
-            .with_dimensions(root.settings.graphics.window_size[0] as u32
-                            ,root.settings.graphics.window_size[1] as u32)
-            .with_title(root.settings.graphics.window_title.clone())
+            .with_dimensions(root.sync.settings.graphics.window_size[0] as u32
+                            ,root.sync.settings.graphics.window_size[1] as u32)
+            .with_title(root.sync.settings.graphics.window_title.clone())
             .with_visibility(false);
 
         let (window, device,factory,_,_) = 
@@ -36,8 +36,8 @@ impl WindowSystem{
             <Rgba8,gfx_core::format::Depth>(builder);
 
 
-        window.set_position(root.settings.graphics.window_pos[0] as i32
-                            ,root.settings.graphics.window_pos[0] as i32);
+        window.set_position(root.sync.settings.graphics.window_pos[0] as i32
+                            ,root.sync.settings.graphics.window_pos[0] as i32);
         window.show();
         (WindowSystem{
             internal: window,
@@ -50,7 +50,7 @@ impl System for WindowSystem{
         for event  in self.internal.poll_events(){
             match event{
                 Event::Closed => {
-                    root.running.quit();
+                    root.async.running.quit();
                 },
                 _ => {},
             }

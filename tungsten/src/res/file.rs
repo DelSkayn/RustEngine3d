@@ -1,0 +1,6 @@
+
+struct FileData{
+}
+
+struct FileManager{
+}
