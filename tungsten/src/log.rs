@@ -1,5 +1,4 @@
 use super::log_ext::{LogLevel,LogRecord, LogMetadata,SetLoggerError,LogLevelFilter};
-use super::log_ext::LogLevel::*;
 
 use super::time;
 

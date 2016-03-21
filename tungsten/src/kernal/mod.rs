@@ -3,11 +3,13 @@ use super::Root;
 
 mod schedular;
 pub use self::schedular::Schedular;
-pub use self::schedular::Job;
-pub use self::schedular::JobError;
+
+mod job_manager;
+pub use self::job_manager::Job;
+pub use self::job_manager::JobError;
+use self::job_manager::JobManager;
 
 mod thread_manager;
-use self::thread_manager::ThreadManager;
 
 /// A trait for object which can create jobs.
 pub trait System{
@@ -20,16 +22,16 @@ pub trait System{
 pub struct Kernal<'a>{
     root: &'a Root,
     systems: Vec<Box<System>>,
-    thread_manager: ThreadManager,
+    job_manager: JobManager,
 }
 
 impl<'a> Kernal<'a>{
     pub fn new(root: &'a Root) -> Self{
         info!("Kernal Created.");
         Kernal{
+            job_manager: JobManager::new(root.async.platform.cores),
             root: root,
             systems: Vec::new(),
-            thread_manager: ThreadManager::new(),
         }
     }
 
@@ -39,13 +41,11 @@ impl<'a> Kernal<'a>{
 
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
-        self.thread_manager.create(self.root.async.platform.cores);
         //Game loop
         while self.root.async.running.should(){
             for sys in &mut self.systems{
                 let mut schedular = Schedular::new();
                 sys.run(self.root,&mut schedular);
-                schedular.flush(&mut self.thread_manager);
             }
             trace!("Frame end");
         }

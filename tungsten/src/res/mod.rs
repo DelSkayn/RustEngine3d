@@ -1,7 +1,7 @@
 
 use super::System;
 use super::Schedular;
-use super::AtomicOption;
+use super::util::AtomicOption;
 use super::Root;
 
 trait Resource{}

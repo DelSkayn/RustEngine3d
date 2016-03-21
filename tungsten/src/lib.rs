@@ -19,6 +19,8 @@ extern crate log as log_ext;
 extern crate time;
 extern crate crossbeam;
 
+mod util;
+
 mod log;
 use log::SimpleLogger;
 
@@ -27,7 +29,6 @@ pub use game::Game;
 
 mod root;
 pub use root::Root;
-pub use root::AtomicOption;
 
 mod platform;
 pub use platform::Platform;

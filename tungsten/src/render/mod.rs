@@ -1,6 +1,6 @@
 use super::System;
 use super::Root;
-use super::AtomicOption;
+use super::util::AtomicOption;
 use super::Schedular;
 
 mod gfx_renderer;

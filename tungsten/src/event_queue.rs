@@ -1,3 +1,12 @@
+// 
+// SCRAPED!!!!!!!!
+//
+// Consider this deleted.
+// It is here for a reminder of how not to design 
+// 
+//
+
+/*
 use std::sync::atomic::{
     AtomicUsize,
     Ordering
@@ -8,18 +17,24 @@ use std::ops::Index;
 
 use std::cell::UnsafeCell;
 
+use std::iter::Iterator;
+use std::iter::IntoIterator;
+
 use super::Event;
+
+
 
 static MAX_EVENTS:usize = 1024;
 
 
-pub struct EventQueue{
-    events: UnsafeCell<[Event; 1024]>,
+pub struct EventQueue<T>{
+    events: UnsafeCell<[T; 1024]>,
     size: AtomicUsize,
     first: AtomicUsize,
 }
 
-impl EventQueue{
+
+impl<T> EventQueue<T>{
     pub fn new() -> Self{
         let event;
         unsafe{
@@ -37,7 +52,7 @@ impl EventQueue{
     /// The event wil be placed at the front of the queue.
     /// When the queue is already fill it will warn and override an event.
     ///
-    pub fn push(&self,event: Event){
+    pub fn push(&self,event: T){
         loop{
             let size = self.size.load(Ordering::AcqRel);
             if size == MAX_EVENTS{
@@ -49,6 +64,10 @@ impl EventQueue{
                 break;
             }else{
                 if self.size.compare_and_swap(size,size+1,Ordering::AcqRel) != size{
+                    /// yeah no
+                    /// This isnt gonna work
+                    /// I dont know what you where thinking but....
+                    /// This leads to all the reads of uninitialized mem.
                     let index = self.first.load(Ordering::AcqRel) + size;
                     unsafe{
                         (*self.events.get())[index] = event;
@@ -58,25 +77,36 @@ impl EventQueue{
             }
         }
     }
-}
 
-impl Index<usize> for EventQueue{
-    type Output = Event;
-
-    //The problems:
-    //  How do we know were to start the event queue?
-    fn index(&self,index: usize) -> &Event{
-        let first = self.first.load(Ordering::Relaxed);
-        let last = first + self.size.load(Ordering::Relaxed);
-        if index < first || index >= last {
-            panic!("Incorrect index EventQueue.");
-        }
-        unsafe{
-            &(*self.events.get())[index % MAX_EVENTS]
-        }
+    /// Clears the event queue.
+    /// Can unfortunatly only be used when when there are 
+    /// no borrows of the queu so it is unsafe.
+    pub unsafe fn clear(&self){
+        self.size.store(0,Ordering::Release);
     }
 }
 
+pub struct EventQueueIter<'a,T>{
+    queue: &'a EventQueue,
+    index: usize,
+}
+
+impl<'a,T> Iterator for EventQueue<'a,T>{
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item>{
+        let first = self.queue.first.load(Ordering::Acquire);
+        if index < first {
+            None
+        }else{
+            let size = self.queue.size.load(Ordering::Acquire);
+            if index >= first+size{
+                None
+            }else{
+                self.queue.
+            }
+        }
+    }
+}
 //Old comments for documentation
 
 // # about the modulo
@@ -88,3 +118,21 @@ impl Index<usize> for EventQueue{
 //Than why not just have first keep increasing and loading handle the modulo?
 //Hmmm..
 //Good point, prob better.
+
+
+#[cfg(test)]
+mod test{
+    use super::*;
+    use std::sync::Arc;
+
+    use std::thread::*;
+
+    #[test]
+    fn test_queue_cache(){
+        let event_queue = Arc::new(EventQueue::new());
+        let clone = event_queue.clone();
+        let thread = spawn(move ||{
+        });
+    }
+}
+*/
