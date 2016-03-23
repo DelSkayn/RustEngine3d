@@ -18,7 +18,7 @@ pub use super::super::gfx::format::{
 use super::{
     Renderer,
     Mesh,
-    Material,
+    //Material,
 };
 
 use std::marker::PhantomData;
@@ -219,7 +219,7 @@ impl<D: Device,R: Resources,F: Factory<R>> GfxRenderer<D,R,F>{
 impl<D: Device,R: Resources,F: Factory<R>> Renderer for GfxRenderer<D,R,F>{
     fn render(&mut self){}
 
-    fn load_mesh(&mut self,mesh: Mesh){}
+    fn load_mesh(&mut self,_mesh: Mesh){}
 }
 
 

@@ -1,0 +1,7 @@
+[package]
+name = "tungsten-project"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+env_parser = "*"

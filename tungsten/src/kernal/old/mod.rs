@@ -3,36 +3,31 @@ use super::Root;
 
 mod schedular;
 pub use self::schedular::Schedular;
-
-mod job_manager;
-pub use self::job_manager::Job;
-pub use self::job_manager::JobError;
-pub use self::job_manager::JobBuilder;
-use self::job_manager::JobManager;
+pub use self::schedular::Job;
+pub use self::schedular::JobError;
 
 mod thread_manager;
+use self::thread_manager::ThreadManager;
 
 /// A trait for object which can create jobs.
 pub trait System{
     /// A function called when the system needs to run.
-    fn run(&mut self,root: &Root) -> Option<JobBuilder>;
+    fn run(&mut self,root: &Root,schedular: &mut Schedular);
 }
 
 /// The heart of the engine, the kernal keeps the engine running 
 /// and manages all the jobs.
 pub struct Kernal<'a>{
     root: &'a Root,
-    systems: Vec<Box<System>>,
-    job_manager: JobManager,
 }
 
 impl<'a> Kernal<'a>{
     pub fn new(root: &'a Root) -> Self{
         info!("Kernal Created.");
         Kernal{
-            job_manager: JobManager::new(root.async.platform.cores,root),
             root: root,
             systems: Vec::new(),
+            thread_manager: ThreadManager::new(),
         }
     }
 
@@ -42,15 +37,14 @@ impl<'a> Kernal<'a>{
 
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
+        self.thread_manager.create(self.root.async.platform.cores);
         //Game loop
         while self.root.async.running.should(){
             for sys in &mut self.systems{
-                if let Some(builder) = sys.run(self.root){
-                    self.job_manager.add_jobs(builder);
-                }
-                self.job_manager.update();
+                let mut schedular = Schedular::new();
+                sys.run(self.root,&mut schedular);
+                schedular.flush(&mut self.thread_manager);
             }
-            self.job_manager.frame();
             trace!("Frame end");
         }
         //end loop
@@ -60,8 +54,11 @@ impl<'a> Kernal<'a>{
 #[cfg(test)]
 mod test{
     use super::*;
+    use super::schedular::Job;
+    use super::schedular::JobError;
     use super::super::game::Game;
     use super::super::Root;
+    use std::sync::atomic::Ordering;
 
     struct HelloWorld;
     struct HelloJob{
@@ -79,15 +76,13 @@ mod test{
     }
 
     impl System for HelloWorld{
-        fn run(&mut self,root: &Root) -> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
+        fn run(&mut self,root: &Root,sched: &mut Schedular){
             for i in 0..10{
-                job_builder.add_job(Box::new(HelloJob{
+                sched.add_job(Box::new(HelloJob{
                     test:i,
                 }));
             }
-            root.async.running.quit();
-            Some(job_builder)
+            root.running.quit();
         }
     }
     
@@ -100,45 +95,6 @@ mod test{
         kernal.run();
     }
 
-    struct HelloWorldSync;
-
-    struct HelloJobSync{
-        test: u64,
-    }
-
-    impl Job for HelloJobSync{
-        fn execute(&mut self) -> Result<(),JobError>{
-            println!("Hello world Sync: {}",self.test);
-            Ok(())
-        }
-    }
-
-    impl System for HelloWorldSync{
-        fn run(&mut self,root: &Root) -> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
-            job_builder.add_job(Box::new(HelloJobSync{
-                test:0,
-            }));
-            for i in 1..10{
-                job_builder.add_fence();
-                job_builder.add_job(Box::new(HelloJobSync{
-                    test:i,
-                }));
-            }
-            root.async.running.quit();
-            Some(job_builder)
-        }
-    }
-
-    #[test]
-    fn kernal_hello_syncronisation(){
-        let root = Root::new(HelloGame);
-        let mut kernal = Kernal::new(&root);
-        kernal.add_system(Box::new(HelloWorldSync));
-        println!("Running");
-        kernal.run();
-    }
-
     fn fibbo(num: u64) -> u64{
         match num{
             0 => 1,
@@ -146,19 +102,19 @@ mod test{
             x => fibbo(x-1) + fibbo(x -2),
         }
         /*
-           if num == 0 || num == 1{
-           1
-           }else{
-           let mut first = 1;
-           let mut second = 1;
-           for i in 2..num+1{
-           let new = first + second;
-           first = second;
-           second = new;
-           }
-           second
-           }
-           */
+        if num == 0 || num == 1{
+            1
+        }else{
+            let mut first = 1;
+            let mut second = 1;
+            for i in 2..num+1{
+                let new = first + second;
+                first = second;
+                second = new;
+            }
+            second
+        }
+        */
     }
 
     struct FibboWorld;
@@ -173,15 +129,13 @@ mod test{
     }
 
     impl System for FibboWorld{
-        fn run(&mut self,root: &Root)-> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
+        fn run(&mut self,root: &Root,sched: &mut Schedular){
             for i in 20..44{
-                job_builder.add_job(Box::new(FibboJob{
+                sched.add_job(Box::new(FibboJob{
                     test:i,
                 }));
             }
-            root.async.running.quit();
-            Some(job_builder)
+            root.running.quit();
         }
     }
 

@@ -3,6 +3,8 @@ use super::Game;
 use super::Platform;
 use super::Settings;
 
+use std::sync::Arc;
+
 use super::render::RenderRoot;
 
 use super::util::Running;
@@ -14,7 +16,7 @@ use super::util::Running;
 ///internaly mutable.
 ///
 pub struct Root{
-    pub async: AsyncRoot,
+    pub async: Arc<AsyncRoot>,
     pub sync: SyncRoot,
 }
 
@@ -43,11 +45,11 @@ impl Root{
                 game: Box::new(game),
                 settings: Settings::new(),
             },
-            async: AsyncRoot{
+            async: Arc::new(AsyncRoot{
                 platform: Platform::new(),
                 running: Running::new(),
                 render: RenderRoot::new(),
-            },
+            }),
         }
     }
 }

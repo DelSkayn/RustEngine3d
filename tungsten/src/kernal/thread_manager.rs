@@ -15,6 +15,10 @@ impl ThreadManager{
     pub fn add_thread<F: Fn()+Send+'static>(&mut self,func: F){
         self.threads.push(thread::spawn(func));
     }
+
+    pub fn amount(&self) -> usize{
+        self.threads.len()
+    }
 }
 
 impl Drop for ThreadManager{
