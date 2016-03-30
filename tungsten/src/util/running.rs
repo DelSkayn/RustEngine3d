@@ -13,10 +13,10 @@ impl Running{
     }
 
     pub fn quit(&self){
-        self.interal.store(false,Ordering::Relaxed);
+        self.interal.store(false,Ordering::Acquire);
     }
 
     pub fn should(&self) -> bool{
-        self.interal.load(Ordering::Relaxed)
+        self.interal.load(Ordering::Release)
     }
 }

@@ -3,6 +3,9 @@
 //! For now it is mostly a struct containing some data, 
 //! but eventually it will also deal with loading a config file and managing runtime changes.
 //!
+//!
+
+extern crate toml;
 
 ///
 /// A struct containing all the settings in the engine divided in catagories as 

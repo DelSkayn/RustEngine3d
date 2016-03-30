@@ -63,6 +63,10 @@ mod test{
     use super::super::game::Game;
     use super::super::Root;
 
+    use std::sync::Arc;
+    use std::cell::UnsafeCell;
+    use std::sync::atomic::AtomicUsize;
+
     struct HelloWorld;
     struct HelloJob{
         test: u64,
@@ -100,15 +104,18 @@ mod test{
         kernal.run();
     }
 
-    struct HelloWorldSync;
+    struct HelloWorldSync{
+        result: Arc<(AtomicUsize,UnsafeCell<[usize; 100]>)>,
+    }
 
     struct HelloJobSync{
-        test: u64,
+        test: usize,
+        result: Arc<(AtomicUsize,UnsafeCell<[usize; 100]>)>,
     }
 
     impl Job for HelloJobSync{
         fn execute(&mut self) -> Result<(),JobError>{
-            println!("Hello world Sync: {}",self.test);
+            let index = self.result.0.fetch_add(1,Ordering::AcqRel);
             Ok(())
         }
     }
@@ -118,11 +125,13 @@ mod test{
             let mut job_builder = JobBuilder::new();
             job_builder.add_job(Box::new(HelloJobSync{
                 test:0,
+                result: self.result.clone(),
             }));
-            for i in 1..10{
+            for i in 1..100{
                 job_builder.add_fence();
                 job_builder.add_job(Box::new(HelloJobSync{
                     test:i,
+                    result: self.result.clone(),
                 }));
             }
             root.async.running.quit();
@@ -132,11 +141,10 @@ mod test{
 
     #[test]
     fn kernal_hello_syncronisation(){
-        let root = Root::new(HelloGame);
-        let mut kernal = Kernal::new(&root);
-        kernal.add_system(Box::new(HelloWorldSync));
-        println!("Running");
-        kernal.run();
+        let result = Arc::new((AtomicUsize::new(0),UnsafeCell::new([0;100])));
+        let sys = HelloJobSync{
+            result: result.clone(),
+        };
     }
 
     fn fibbo(num: u64) -> u64{

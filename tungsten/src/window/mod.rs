@@ -19,6 +19,12 @@ use self::glutin::Window;
 use self::glutin::Event;
 use self::glutin::WindowBuilder;
 
+pub struct Context;
+
+pub struct WindowData{
+    context: Context,
+}
+
 pub struct WindowSystem{
     internal: Window,
 }

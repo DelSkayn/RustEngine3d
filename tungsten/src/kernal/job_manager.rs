@@ -1,6 +1,7 @@
 use super::thread_manager::ThreadManager;
 
 use super::super::Root;
+use super::super::AsyncRoot;
 
 use super::super::util::Running;
 
@@ -37,12 +38,13 @@ impl JobId{
 pub trait Job: Send + Sync{
     /// Executed when the job needs to be run.
     /// Can fail.
-    fn execute(&mut self) -> Result<(),JobError>;
+    fn execute(&mut self,root: &AsyncRoot) -> Result<(),JobError>;
 
     /// Retruns if there needs to be a job executed after this one is 
     /// finished.
     /// WARN: Possible removed.
     fn next(&mut self) -> Option<Box<Job>>{
+        // I think this will still be nessary maybe in a different form.
         None
     }
 }
@@ -50,7 +52,7 @@ pub trait Job: Send + Sync{
 struct NullJob;
 
 impl Job for NullJob{
-    fn execute(&mut self) -> Result<(), JobError>{
+    fn execute(&mut self,_: &AsyncRoot) -> Result<(), JobError>{
         Ok(())
     }
 }
@@ -174,7 +176,7 @@ pub struct JobManager{
 }
 
 impl JobManager{
-    pub fn new(amount: usize,_root: &Root) -> Self{
+    pub fn new(amount: usize,root: &Root) -> Self{
         let job_que = Arc::new(MsQueue::new());
         let mut threads = ThreadManager::new();
         let thread = thread::current();
@@ -184,10 +186,11 @@ impl JobManager{
             let queue = job_que.clone();
             let main_thread = thread.clone();
             let run = running.clone();
+            let aroot = root.async.clone();
             threads.add_thread(move ||{
                 while run.should(){
                     let mut job: SendJobStruct = queue.pop();
-                    match job.job.execute(){
+                    match job.job.execute(&aroot){
                         Ok(_) => {},
                         _ => unimplemented!(),
                     }

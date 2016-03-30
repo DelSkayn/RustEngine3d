@@ -29,6 +29,8 @@ pub use game::Game;
 
 mod root;
 pub use root::Root;
+pub use root::SyncRoot;
+pub use root::AsyncRoot;
 
 mod platform;
 pub use platform::Platform;
