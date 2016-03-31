@@ -45,6 +45,7 @@ mod kernal;
 pub use kernal::System;
 pub use kernal::Schedular;
 pub use kernal::Job;
+pub use kernal::JobBuilder;
 use kernal::Kernal;
 
 mod window;
@@ -53,6 +54,9 @@ use window::WindowSystem;
 mod render;
 use render::RenderSystem;
 use render::GfxRenderer;
+
+mod io;
+pub use io::IOData;
 
 mod res;
 //use res::ResourcesSystem;

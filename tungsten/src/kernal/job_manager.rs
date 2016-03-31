@@ -182,6 +182,12 @@ impl JobManager{
         let thread = thread::current();
         let running = Arc::new(Running::new());
 
+        let amount = if amount > 1 {
+            amount -1
+        }else{
+            amount
+        };
+
         for _ in 0..amount{
             let queue = job_que.clone();
             let main_thread = thread.clone();

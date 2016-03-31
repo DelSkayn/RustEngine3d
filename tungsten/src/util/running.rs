@@ -13,10 +13,10 @@ impl Running{
     }
 
     pub fn quit(&self){
-        self.interal.store(false,Ordering::Acquire);
+        self.interal.store(false,Ordering::Release);
     }
 
     pub fn should(&self) -> bool{
-        self.interal.load(Ordering::Release)
+        self.interal.load(Ordering::Acquire)
     }
 }
