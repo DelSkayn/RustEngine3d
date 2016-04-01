@@ -17,6 +17,23 @@ use self::stream::StreamManager;
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct FileId(u64);
 
+impl FileId{
+    fn from_path(path: &Path) -> Self{
+        // TODO actually hash this when a hasher is implemented;
+        let lower_path = path.to_str().to_lowercase();
+        let slice = lower_path.as_bytes();
+        let mut id = 0;
+        id += slice[0] as u64
+        id << 8;
+        id += slice[1] as u64;
+        id << 8;
+        id += slice[2] as u64;
+        id << 8;
+        id += slice[3] as u64;
+        FileId(id)
+    }
+}
+
 pub enum IOError{
     PathNotInRes,
     NotImplemented,
@@ -30,7 +47,7 @@ pub struct IOData{
 impl IOData{
     pub fn new() -> Self{
         IOData{
-            local_dir: env::current_dir().unwrap(),
+            local_dir: env::current_dir().unwrap(),//should not be here... maybe
             internal: RefCell::new(
                 InternalIOData{
                     files: HashMap::new(),
@@ -40,8 +57,19 @@ impl IOData{
     }
 
     pub fn load(&self,path: PathBuf) -> Result<FileId,IOError>{
+        let id = FileId::from_path(&path);
+        let data = self.interal.borrow();
+
+        data.load_queue.push((id.clone(),PathBuf.clone()));
+
+        data.files.insert(id,FileData{
+            path: path,
+            file: None,
+        });
         Err( IOError::NotImplemented)
     }
+
+    fn 
 }
 
 struct InternalIOData{
@@ -73,7 +101,6 @@ impl IOSystem{
 
 impl System for IOSystem{
     fn run(&mut self,root: &Root) -> Option<JobBuilder>{
-
         None
     }
 }

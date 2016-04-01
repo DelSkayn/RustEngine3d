@@ -134,6 +134,8 @@ impl StreamManager{
             reciever: mess_recv,
         }
     }
+
+    pub fn load(&mut self,
 }
 
 impl Drop for StreamManager{
