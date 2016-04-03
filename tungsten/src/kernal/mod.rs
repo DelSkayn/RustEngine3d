@@ -63,9 +63,12 @@ mod test{
     use super::super::game::Game;
     use super::super::Root;
 
+    use super::super::AsyncRoot;
+
     use std::sync::Arc;
-    use std::cell::UnsafeCell;
+    //use std::cell::UnsafeCell;
     use std::sync::atomic::AtomicUsize;
+    //use std::sync::atomic::Ordering;
 
     struct HelloWorld;
     struct HelloJob{
@@ -76,7 +79,7 @@ mod test{
     impl Game for HelloGame{}
 
     impl Job for HelloJob{
-        fn execute(&mut self) -> Result<(),JobError>{
+        fn execute(&mut self,_:&AsyncRoot) -> Result<(),JobError>{
             println!("Hello world: {}",self.test);
             Ok(())
         }
@@ -105,16 +108,16 @@ mod test{
     }
 
     struct HelloWorldSync{
-        result: Arc<(AtomicUsize,UnsafeCell<[usize; 100]>)>,
+        result: Arc<(AtomicUsize,[usize; 100])>,
     }
 
     struct HelloJobSync{
-        test: usize,
-        result: Arc<(AtomicUsize,UnsafeCell<[usize; 100]>)>,
+        result: Arc<(AtomicUsize,[usize; 100])>,
     }
+    /*
 
     impl Job for HelloJobSync{
-        fn execute(&mut self) -> Result<(),JobError>{
+        fn execute(&mut self,_: &AsyncRoot) -> Result<(),JobError>{
             let index = self.result.0.fetch_add(1,Ordering::AcqRel);
             Ok(())
         }
@@ -124,13 +127,11 @@ mod test{
         fn run(&mut self,root: &Root) -> Option<JobBuilder>{
             let mut job_builder = JobBuilder::new();
             job_builder.add_job(Box::new(HelloJobSync{
-                test:0,
                 result: self.result.clone(),
             }));
             for i in 1..100{
                 job_builder.add_fence();
                 job_builder.add_job(Box::new(HelloJobSync{
-                    test:i,
                     result: self.result.clone(),
                 }));
             }
@@ -141,11 +142,12 @@ mod test{
 
     #[test]
     fn kernal_hello_syncronisation(){
-        let result = Arc::new((AtomicUsize::new(0),UnsafeCell::new([0;100])));
+        let result = Arc::new((AtomicUsize::new(0),[0;100]));
         let sys = HelloJobSync{
             result: result.clone(),
         };
     }
+    */
 
     fn fibbo(num: u64) -> u64{
         match num{
@@ -174,7 +176,7 @@ mod test{
         test: u64,
     }
     impl Job for FibboJob{
-        fn execute(&mut self) -> Result<(),JobError>{
+        fn execute(&mut self,_:&AsyncRoot) -> Result<(),JobError>{
             println!("fibbo,{} = {}",self.test,fibbo(self.test));
             Ok(())
         }

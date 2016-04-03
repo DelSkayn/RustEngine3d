@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::cell::RefCell;
 
 use std::path::PathBuf;
+use std::path::Path;
 
 use std::env;
 
@@ -20,10 +21,12 @@ pub struct FileId(u64);
 impl FileId{
     fn from_path(path: &Path) -> Self{
         // TODO actually hash this when a hasher is implemented;
-        let lower_path = path.to_str().to_lowercase();
+        // The current implementation only uses the first 
+        // four bytes of the path.
+        let lower_path = path.to_str().unwrap().to_lowercase();
         let slice = lower_path.as_bytes();
         let mut id = 0;
-        id += slice[0] as u64
+        id += slice[0] as u64;
         id << 8;
         id += slice[1] as u64;
         id << 8;
@@ -58,9 +61,9 @@ impl IOData{
 
     pub fn load(&self,path: PathBuf) -> Result<FileId,IOError>{
         let id = FileId::from_path(&path);
-        let data = self.interal.borrow();
+        let mut data = self.internal.borrow_mut();
 
-        data.load_queue.push((id.clone(),PathBuf.clone()));
+        data.load_queue.push_back((id.clone(),path.clone()));
 
         data.files.insert(id,FileData{
             path: path,
@@ -69,7 +72,6 @@ impl IOData{
         Err( IOError::NotImplemented)
     }
 
-    fn 
 }
 
 struct InternalIOData{
@@ -100,7 +102,7 @@ impl IOSystem{
 }
 
 impl System for IOSystem{
-    fn run(&mut self,root: &Root) -> Option<JobBuilder>{
+    fn run(&mut self,_root: &Root) -> Option<JobBuilder>{
         None
     }
 }
