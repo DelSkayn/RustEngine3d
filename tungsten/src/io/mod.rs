@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::collections::HashMap;
 
 use std::cell::RefCell;
 
@@ -12,6 +12,11 @@ use super::System;
 use super::Root;
 use super::JobBuilder;
 
+use std::hash::Hasher;
+
+use super::util::HashAlgo;
+use super::util::NoHashBuilder;
+
 mod stream;
 use self::stream::StreamManager;
 
@@ -23,17 +28,14 @@ impl FileId{
         // TODO actually hash this when a hasher is implemented;
         // The current implementation only uses the first 
         // four bytes of the path.
-        let lower_path = path.to_str().unwrap().to_lowercase();
-        let slice = lower_path.as_bytes();
-        let mut id = 0;
-        id += slice[0] as u64;
-        id << 8;
-        id += slice[1] as u64;
-        id << 8;
-        id += slice[2] as u64;
-        id << 8;
-        id += slice[3] as u64;
-        FileId(id)
+        let lower_path = &path.to_str().unwrap().to_lowercase();
+        let mut hasher = HashAlgo::new();
+        hasher.write(lower_path.as_bytes());
+        FileId(hasher.finish())
+    }
+
+    fn inner(&self) -> u64{
+        self.0
     }
 }
 
@@ -53,7 +55,7 @@ impl IOData{
             local_dir: env::current_dir().unwrap(),//should not be here... maybe
             internal: RefCell::new(
                 InternalIOData{
-                    files: HashMap::new(),
+                    files: HashMap::with_hasher(NoHashBuilder::new()),
                     load_queue: VecDeque::new(),
                 }),
         }
@@ -65,17 +67,17 @@ impl IOData{
 
         data.load_queue.push_back((id.clone(),path.clone()));
 
-        data.files.insert(id,FileData{
+        data.files.insert(id.inner(),FileData{
             path: path,
             file: None,
         });
-        Err( IOError::NotImplemented)
+        Err(IOError::NotImplemented)
     }
 
 }
 
 struct InternalIOData{
-    files: HashMap<FileId,FileData>,
+    files: HashMap<u64,FileData,NoHashBuilder>,
     load_queue: VecDeque<(FileId,PathBuf)>,
 }
 

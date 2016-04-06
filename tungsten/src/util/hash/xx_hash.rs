@@ -31,20 +31,10 @@
 */
 
 use std::hash::Hasher;
-use std::hash::BuildHasher;
 
 use std::mem;
 use std::ptr;
 
-struct FastHashBuilder;
-
-impl BuildHasher for FastHashBuilder{
-    type Hasher = XXHasher;
-
-    fn build_hasher(&self) -> Self::Hasher{
-        Self::Hasher::new()
-    }
-}
 
 const PRIME_1: u64 = 11400714785074694791;
 const PRIME_2: u64 = 14029467366897019727;
@@ -98,16 +88,6 @@ impl XXHasher{
         to = to.wrapping_mul(PRIME_1);
         to
     }
-
-    #[inline(always)]
-    fn update(to: &mut u64,h: &mut u64){
-        *to = to.wrapping_mul(PRIME_2);
-        *to = rotl!(*to, 31);
-        *to = to.wrapping_mul(PRIME_1);
-        *h ^= *to;
-        *h = h.clone().wrapping_mul(PRIME_1.wrapping_add(PRIME_4));
-    }
-
 }
 
 impl Hasher for XXHasher{
@@ -119,17 +99,25 @@ impl Hasher for XXHasher{
             self.total_len += input.len() as u64;
 
             if self.mem_size + (input.len() as u32) < 32{
+
                 let src: *mut u8 = mem::transmute(self.mem.as_mut_ptr());
-                ptr::copy_nonoverlapping(input.as_ptr(),src.offset(self.mem_size as isize),input.len());
+                ptr::copy_nonoverlapping(input.as_ptr()
+                                         ,src.offset(self.mem_size as isize)
+                                         ,input.len());
+
                 self.mem_size += input.len() as u32;
                 return;
             }
 
             if self.mem_size != 0{
-                let src: *mut u8 = mem::transmute(&mut self.mem[0]);
-                ptr::copy_nonoverlapping(&input[0],src.offset(self.mem_size as isize),32-self.mem_size as usize);
+
+                let src: *mut u8 = mem::transmute(self.mem.as_ptr());
+                ptr::copy_nonoverlapping(input.as_ptr()
+                                         ,src.offset(self.mem_size as isize)
+                                         ,32-self.mem_size as usize);
+
                 {
-                    let mut p: *const u64 = mem::transmute(&self.mem[0]);
+                    let mut p: *const u64 = mem::transmute(self.mem.as_ptr());
                     self.v1 = Self::eat(p,self.v1);
                     p = p.offset(1);
                     self.v2 = Self::eat(p,self.v2);
@@ -142,7 +130,6 @@ impl Hasher for XXHasher{
                 self.mem_size = 0;
             }
 
-            println!("{:?} <= {:?}",p.offset(32),b_end);
             if p.offset(32) <= b_end{
                 println!("Called");
                 let limit: *const u8 = b_end.offset(-32);
@@ -164,7 +151,7 @@ impl Hasher for XXHasher{
             if p < b_end{
                 let src: *mut u8 = mem::transmute(self.mem.as_ptr());
                 ptr::copy_nonoverlapping(p,src,(b_end as usize)-(p as usize));
-                self.mem_size = (b_end as u32)-(p as u32);
+                self.mem_size = ((b_end as usize)-(p as usize)) as u32;
             }
         }
     }
@@ -182,34 +169,63 @@ impl Hasher for XXHasher{
                 let mut v3 = self.v3;
                 let mut v4 = self.v4;
 
-                h = rotl!(v1,1).wrapping_add(rotl!(v2,7).wrapping_add(rotl!(v3, 12).wrapping_add(rotl!(v4, 18))));
+                h = rotl!(v1,1).wrapping_add(rotl!(v2,7))
+                                .wrapping_add(rotl!(v3, 12))
+                                  .wrapping_add(rotl!(v4, 18));
 
-                Self::update(&mut v1,&mut h);
-                Self::update(&mut v2,&mut h);
-                Self::update(&mut v3,&mut h);
-                Self::update(&mut v4,&mut h);
+                v1 = v1.wrapping_mul(PRIME_2);
+                v1 = rotl!(v1, 31);
+                v1 = v1.wrapping_mul(PRIME_1);
+                h ^= v1;
+                h = h.wrapping_mul(PRIME_1).wrapping_add(PRIME_4);
+
+                v2 = v2.wrapping_mul(PRIME_2);
+                v2 = rotl!(v2, 31);
+                v2 = v2.wrapping_mul(PRIME_1);
+                h ^= v2;
+                h = h.wrapping_mul(PRIME_1).wrapping_add(PRIME_4);
+
+                v3 = v3.wrapping_mul(PRIME_2);
+                v3 = rotl!(v3, 31);
+                v3 = v3.wrapping_mul(PRIME_1);
+                h ^= v3;
+                h = h.wrapping_mul(PRIME_1).wrapping_add(PRIME_4);
+
+                v4 = v4.wrapping_mul(PRIME_2);
+                v4 = rotl!(v4, 31);
+                v4 = v4.wrapping_mul(PRIME_1);
+                h ^= v4;
+                h = h.wrapping_mul(PRIME_1).wrapping_add(PRIME_4);
 
             }else{
                 h = self.seed.wrapping_add(PRIME_5);
             }
 
-            while p.offset(8) <= b_end{
-                let mut k1 = *p as u64;
+            h += self.total_len;
 
-                Self::update(&mut k1,&mut h);
-                h = rotl!(h,27).wrapping_mul(PRIME_1.wrapping_add(PRIME_4));
+            while p.offset(8) <= b_end{
+                let p_u64: *const u64 = mem::transmute(p);
+                let mut k1: u64 = *p_u64;
+
+                k1 = k1.wrapping_mul(PRIME_2);
+                k1 = rotl!(k1,31);
+                k1 = k1.wrapping_mul(PRIME_1);
+                h ^= k1;
+                h = rotl!(h,27).wrapping_mul(PRIME_1)
+                    .wrapping_add(PRIME_4);
                 p = p.offset(8);
             }
 
             if p.offset(4) <= b_end{
+                println!("{}",*p);
                 let p_32: *const u32 = mem::transmute(p);
-                h ^= (*p_32 as u64).wrapping_mul(PRIME_1);
-                h = rotl!(h, 23).wrapping_mul(PRIME_2 + PRIME_3);
+                h ^= ((*p_32) as u64).wrapping_mul(PRIME_1);
+                h = rotl!(h, 23).wrapping_mul(PRIME_2)
+                    .wrapping_add(PRIME_3);
                 p = p.offset(4);
             }
 
             while p < b_end{
-                println!("{}",*p);
                 h ^= ((*p) as u64).wrapping_mul(PRIME_5);
                 h = rotl!(h, 11).wrapping_mul(PRIME_1);
                 p = p.offset(1);
@@ -245,20 +261,22 @@ mod test{
         let mut gen: u32 = 2654435761;
         for _ in 0..101{
             vec.push((gen >> 24) as u8);
+            println!("{}",gen);
             gen = gen.wrapping_mul(gen);
         }
-        
+
         hasher.reset();
         hasher.write(&vec[0..1]);
         let result = hasher.finish();
-        println!("Result: {}",result);
-        //assert!(result == 0x4FCE394CC88952D8_u64);
+        println!("input: {:?}",&vec[0..1]);
+        println!("result: {}",result);
+        assert!(result == 0x4FCE394CC88952D8);
 
         hasher.reset();
         hasher.write(&vec[0..14]);
         let result = hasher.finish();
         println!("Result: {}",result);
-        //assert!(result == 0xCFFA8DB881BC3A3D);
+        assert!(result == 0xCFFA8DB881BC3A3D);
 
         hasher.reset();
         hasher.write(&vec[0..101]);
