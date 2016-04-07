@@ -1,36 +1,33 @@
 
 use super::Root;
 
-mod schedular;
-pub use self::schedular::Schedular;
-
-mod job_manager;
-pub use self::job_manager::Job;
-pub use self::job_manager::JobError;
-pub use self::job_manager::JobBuilder;
-use self::job_manager::JobManager;
+mod task_manager;
+pub use self::task_manager::Task;
+pub use self::task_manager::TaskError;
+pub use self::task_manager::TaskBuilder;
+use self::task_manager::TaskManager;
 
 mod thread_manager;
 
-/// A trait for object which can create jobs.
+/// A trait for object which can create tasks.
 pub trait System{
     /// A function called when the system needs to run.
-    fn run(&mut self,root: &Root) -> Option<JobBuilder>;
+    fn run(&mut self,root: &Root) -> Option<TaskBuilder>;
 }
 
-/// The heart of the engine, the kernal keeps the engine running 
-/// and manages all the jobs.
-pub struct Kernal<'a>{
+/// The heart of the engine, the kernel keeps the engine running 
+/// and manages all the tasks.
+pub struct Kernel<'a>{
     root: &'a Root,
     systems: Vec<Box<System>>,
-    job_manager: JobManager,
+    task_manager: TaskManager,
 }
 
-impl<'a> Kernal<'a>{
+impl<'a> Kernel<'a>{
     pub fn new(root: &'a Root) -> Self{
-        info!("Kernal Created.");
-        Kernal{
-            job_manager: JobManager::new(root.async.platform.cores,root),
+        info!("Kernel Created.");
+        Kernel{
+            task_manager: TaskManager::new(root.async.platform.cores,root),
             root: root,
             systems: Vec::new(),
         }
@@ -46,11 +43,11 @@ impl<'a> Kernal<'a>{
         while self.root.async.running.should(){
             for sys in &mut self.systems{
                 if let Some(builder) = sys.run(self.root){
-                    self.job_manager.add_jobs(builder);
+                    self.task_manager.add_tasks(builder);
                 }
-                self.job_manager.update();
+                self.task_manager.update();
             }
-            self.job_manager.frame();
+            self.task_manager.frame();
             trace!("Frame end");
         }
         //end loop
@@ -71,79 +68,79 @@ mod test{
     //use std::sync::atomic::Ordering;
 
     struct HelloWorld;
-    struct HelloJob{
+    struct HelloTask{
         test: u64,
     }
     struct HelloGame;
     
     impl Game for HelloGame{}
 
-    impl Job for HelloJob{
-        fn execute(&mut self,_:&AsyncRoot) -> Result<(),JobError>{
+    impl Task for HelloTask{
+        fn execute(&mut self,_:&AsyncRoot) -> Result<(),TaskError>{
             println!("Hello world: {}",self.test);
             Ok(())
         }
     }
 
     impl System for HelloWorld{
-        fn run(&mut self,root: &Root) -> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
+        fn run(&mut self,root: &Root) -> Option<TaskBuilder>{
+            let mut task_builder = TaskBuilder::new();
             for i in 0..10{
-                job_builder.add_job(Box::new(HelloJob{
+                task_builder.add_task(Box::new(HelloTask{
                     test:i,
                 }));
             }
             root.async.running.quit();
-            Some(job_builder)
+            Some(task_builder)
         }
     }
     
     #[test]
-    fn kernal_hello(){
+    fn kernel_hello(){
         let root = Root::new(HelloGame);
-        let mut kernal = Kernal::new(&root);
-        kernal.add_system(Box::<HelloWorld>::new(HelloWorld));
+        let mut kernel = Kernel::new(&root);
+        kernel.add_system(Box::<HelloWorld>::new(HelloWorld));
         println!("Running");
-        kernal.run();
+        kernel.run();
     }
 
     struct HelloWorldSync{
         result: Arc<(AtomicUsize,[usize; 100])>,
     }
 
-    struct HelloJobSync{
+    struct HelloTaskSync{
         result: Arc<(AtomicUsize,[usize; 100])>,
     }
     /*
 
-    impl Job for HelloJobSync{
-        fn execute(&mut self,_: &AsyncRoot) -> Result<(),JobError>{
+    impl Task for HelloTaskSync{
+        fn execute(&mut self,_: &AsyncRoot) -> Result<(),TaskError>{
             let index = self.result.0.fetch_add(1,Ordering::AcqRel);
             Ok(())
         }
     }
 
     impl System for HelloWorldSync{
-        fn run(&mut self,root: &Root) -> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
-            job_builder.add_job(Box::new(HelloJobSync{
+        fn run(&mut self,root: &Root) -> Option<TaskBuilder>{
+            let mut task_builder = TaskBuilder::new();
+            task_builder.add_task(Box::new(HelloTaskSync{
                 result: self.result.clone(),
             }));
             for i in 1..100{
-                job_builder.add_fence();
-                job_builder.add_job(Box::new(HelloJobSync{
+                task_builder.add_fence();
+                task_builder.add_task(Box::new(HelloTaskSync{
                     result: self.result.clone(),
                 }));
             }
             root.async.running.quit();
-            Some(job_builder)
+            Some(task_builder)
         }
     }
 
     #[test]
-    fn kernal_hello_syncronisation(){
+    fn kernel_hello_syncronisation(){
         let result = Arc::new((AtomicUsize::new(0),[0;100]));
-        let sys = HelloJobSync{
+        let sys = HelloTaskSync{
             result: result.clone(),
         };
     }
@@ -172,35 +169,35 @@ mod test{
     }
 
     struct FibboWorld;
-    struct FibboJob{
+    struct FibboTask{
         test: u64,
     }
-    impl Job for FibboJob{
-        fn execute(&mut self,_:&AsyncRoot) -> Result<(),JobError>{
+    impl Task for FibboTask{
+        fn execute(&mut self,_:&AsyncRoot) -> Result<(),TaskError>{
             println!("fibbo,{} = {}",self.test,fibbo(self.test));
             Ok(())
         }
     }
 
     impl System for FibboWorld{
-        fn run(&mut self,root: &Root)-> Option<JobBuilder>{
-            let mut job_builder = JobBuilder::new();
+        fn run(&mut self,root: &Root)-> Option<TaskBuilder>{
+            let mut task_builder = TaskBuilder::new();
             for i in 20..44{
-                job_builder.add_job(Box::new(FibboJob{
+                task_builder.add_task(Box::new(FibboTask{
                     test:i,
                 }));
             }
             root.async.running.quit();
-            Some(job_builder)
+            Some(task_builder)
         }
     }
 
     #[test]
-    fn kernal_work(){
+    fn kernel_work(){
         let root = Root::new(HelloGame);
-        let mut kernal = Kernal::new(&root);
-        kernal.add_system(Box::new(FibboWorld));
+        let mut kernel = Kernel::new(&root);
+        kernel.add_system(Box::new(FibboWorld));
         println!("Running");
-        kernal.run();
+        kernel.run();
     }
 }

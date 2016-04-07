@@ -10,7 +10,7 @@ use std::env;
 
 use super::System;
 use super::Root;
-use super::JobBuilder;
+use super::TaskBuilder;
 
 use std::hash::Hasher;
 
@@ -104,7 +104,7 @@ impl IOSystem{
 }
 
 impl System for IOSystem{
-    fn run(&mut self,_root: &Root) -> Option<JobBuilder>{
+    fn run(&mut self,_root: &Root) -> Option<TaskBuilder>{
         None
     }
 }
