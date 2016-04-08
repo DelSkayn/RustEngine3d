@@ -1,7 +1,7 @@
 use super::System;
 use super::Root;
 use super::util::AtomicOption;
-use super::kernal::JobBuilder;
+use super::kernel::TaskBuilder;
 
 mod gfx_renderer;
 pub use self::gfx_renderer::GfxRenderer;
@@ -41,7 +41,7 @@ impl<R: Renderer> RenderSystem<R>{
 }
 
 impl<R: Renderer> System for RenderSystem<R>{
-    fn run(&mut self,_root: &Root) -> Option<JobBuilder>{
+    fn run(&mut self,_root: &Root) -> Option<TaskBuilder>{
         None
     }
 }

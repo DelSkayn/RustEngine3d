@@ -41,12 +41,11 @@ pub use settings::Settings;
 //mod event;
 //pub use event::Event;
 
-mod kernal;
-pub use kernal::System;
-pub use kernal::Schedular;
-pub use kernal::Job;
-pub use kernal::JobBuilder;
-use kernal::Kernal;
+mod kernel;
+pub use kernel::System;
+pub use kernel::Task;
+pub use kernel::TaskBuilder;
+use kernel::Kernel;
 
 mod window;
 use window::WindowSystem;
@@ -84,10 +83,10 @@ impl Engine{
         let (window,device,factory) = WindowSystem::new(&root);
         let renderer = GfxRenderer::new(device,factory,root.sync.settings.graphics.window_size);
         let render_sys = RenderSystem::new(renderer);
-        let mut kernal = Kernal::new(&mut root);
-        kernal.add_system(Box::new(window));
-        kernal.add_system(Box::new(render_sys));
-        kernal.run();
+        let mut kernel = Kernel::new(&mut root);
+        kernel.add_system(Box::new(window));
+        kernel.add_system(Box::new(render_sys));
+        kernel.run();
         info!("Engine closed.");
     }
 }

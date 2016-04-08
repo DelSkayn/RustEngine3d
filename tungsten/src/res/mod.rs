@@ -1,6 +1,6 @@
 
 use super::System;
-use super::kernal::JobBuilder;
+use super::kernel::TaskBuilder;
 use super::util::AtomicOption;
 use super::Root;
 
@@ -15,7 +15,7 @@ struct ResourceData{
 pub struct ResourcesSystem;
 
 impl System for ResourcesSystem{
-    fn run(&mut self,_root: &Root) -> Option<JobBuilder>{
+    fn run(&mut self,_root: &Root) -> Option<TaskBuilder>{
         None
     }
 }

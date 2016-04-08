@@ -12,8 +12,8 @@ use self::gfx_device_gl::{
 
 use super::Root;
 
-use super::kernal::System;
-use super::kernal::JobBuilder;
+use super::kernel::System;
+use super::kernel::TaskBuilder;
 
 use self::glutin::Window;
 use self::glutin::Event;
@@ -52,7 +52,7 @@ impl WindowSystem{
 }
 
 impl System for WindowSystem{
-    fn run(&mut self,root: &Root)-> Option<JobBuilder>{
+    fn run(&mut self,root: &Root)-> Option<TaskBuilder>{
         for event  in self.internal.poll_events(){
             match event{
                 Event::Closed => {
