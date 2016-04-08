@@ -1,16 +1,11 @@
-use std::collections::VecDeque;
 use std::collections::HashMap;
-
-use std::cell::RefCell;
 
 use std::path::PathBuf;
 use std::path::Path;
 
-use std::env;
+use std::io::Error;
+use std::io::ErrorKind;
 
-use super::System;
-use super::Root;
-use super::JobBuilder;
 
 use std::hash::Hasher;
 
@@ -19,9 +14,12 @@ use super::util::NoHashBuilder;
 
 mod stream;
 use self::stream::StreamManager;
+use self::stream::StreamMessage;
+use self::stream::StreamCommand;
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct FileId(u64);
+
 
 impl FileId{
     fn from_path(path: &Path) -> Self{
@@ -39,46 +37,74 @@ impl FileId{
     }
 }
 
+#[derive(Debug)]
 pub enum IOError{
     PathNotInRes,
     NotImplemented,
+    FileDoesNotExist,
+    PermissionDeneid,
+    NotAFile,
+    Other,
+}
+
+impl IOError{
+
+    fn from_error(error: Error) -> Self{
+        match error.kind(){
+            ErrorKind::NotFound => IOError::FileDoesNotExist,
+            ErrorKind::PermissionDenied => IOError::PermissionDeneid,
+            _ => IOError::Other,
+        }
+
+    }
 }
 
 pub struct IOData{
-    local_dir: PathBuf,
-    internal: RefCell<InternalIOData>,
+    files: HashMap<u64,FileData,NoHashBuilder>,
+    stream: StreamManager,
 }
 
 impl IOData{
     pub fn new() -> Self{
         IOData{
-            local_dir: env::current_dir().unwrap(),//should not be here... maybe
-            internal: RefCell::new(
-                InternalIOData{
-                    files: HashMap::with_hasher(NoHashBuilder::new()),
-                    load_queue: VecDeque::new(),
-                }),
+            //local_dir: env::current_dir().unwrap(),//should not be here... maybe
+            files: HashMap::with_hasher(NoHashBuilder::new()),
+            stream: StreamManager::new(),
         }
     }
 
-    pub fn load(&self,path: PathBuf) -> Result<FileId,IOError>{
+    pub fn load(&mut self,path: PathBuf) -> Result<FileId,IOError>{
         let id = FileId::from_path(&path);
-        let mut data = self.internal.borrow_mut();
-
-        data.load_queue.push_back((id.clone(),path.clone()));
-
-        data.files.insert(id.inner(),FileData{
-            path: path,
+        self.files.insert(id.inner(),FileData{
+            path: path.clone(),
             file: None,
         });
-        Err(IOError::NotImplemented)
+        self.stream.send(StreamCommand::Load(id.clone(),path));
+        Ok(id)
     }
 
-}
+    pub fn get(&mut self,id: FileId) -> &FileData{
+        unimplemented!()
+    }
 
-struct InternalIOData{
-    files: HashMap<u64,FileData,NoHashBuilder>,
-    load_queue: VecDeque<(FileId,PathBuf)>,
+    fn cycle(&mut self){
+        while let Some(x) = self.stream.get(){
+            match x {
+                StreamMessage::Done(id,data) =>{
+                    self.files.get_mut(&id.inner()).unwrap()
+                        .file = Some(FileForm::Raw(data));
+                },
+                StreamMessage::DoneStr(id,data) =>{
+                    self.files.get_mut(&id.inner()).unwrap()
+                        .file = Some(FileForm::Str(data));
+                },
+                StreamMessage::Error(id,error) => {
+                    self.files.get_mut(&id.inner()).unwrap()
+                        .file = Some(FileForm::Error(error));
+                },
+            }
+        }
+    }
 }
 
 pub struct FileData{
@@ -89,22 +115,6 @@ pub struct FileData{
 pub enum FileForm{
     Str(String),
     Raw(Vec<u8>),
+    Error(IOError),
 }
 
-struct IOSystem{
-    stream: StreamManager,
-}
-
-impl IOSystem{
-    fn new() -> Self{
-        IOSystem{
-            stream: StreamManager::new(),
-        }
-    }
-}
-
-impl System for IOSystem{
-    fn run(&mut self,_root: &Root) -> Option<JobBuilder>{
-        None
-    }
-}

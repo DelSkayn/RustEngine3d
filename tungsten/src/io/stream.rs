@@ -6,15 +6,15 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use std::io::Read;
-use std::io::Error;
-use std::io::ErrorKind;
 
 use super::FileId;
+use super::IOError;
 
 use std::sync::mpsc::{
     Receiver,
     Sender,
     channel,
+    TryRecvError,
 };
 
 struct FileStream;
@@ -38,7 +38,7 @@ impl FileStream {
                 Ok(_) => {},
                 Err(err) => {
                     error!("Error while reading file {:?}",err);
-                    sender.send(StreamMessage::Error(file_id,StreamError::from_error(err))).unwrap();
+                    sender.send(StreamMessage::Error(file_id,IOError::from_error(err))).unwrap();
                     return;
                 }
             };
@@ -53,7 +53,7 @@ impl FileStream {
                 Ok(_) => {},
                 Err(err) => {
                     error!("Error while reading file {:?}",err);
-                    sender.send(StreamMessage::Error(file_id,StreamError::from_error(err))).unwrap();
+                    sender.send(StreamMessage::Error(file_id,IOError::from_error(err))).unwrap();
                     return;
                 }
             };
@@ -65,54 +65,37 @@ impl FileStream {
         let file = match File::open(path){
             Ok(file) => file,
             Err(e) => {
-                sender.send(StreamMessage::Error(file_id.clone(),StreamError::from_error(e))).unwrap();
+                sender.send(StreamMessage::Error(file_id.clone(),IOError::from_error(e))).unwrap();
                 return None;
             }
         };
         let metadata = match file.metadata(){
             Ok(meta) => meta,
             Err(e) => {
-                sender.send(StreamMessage::Error(file_id.clone(),StreamError::from_error(e))).unwrap();
+                sender.send(StreamMessage::Error(file_id.clone(),IOError::from_error(e))).unwrap();
                 return None;
             }
         };
         if metadata.is_dir(){
-            sender.send(StreamMessage::Error(file_id.clone(),StreamError::NotAFile)).unwrap();
+            sender.send(StreamMessage::Error(file_id.clone(),IOError::NotAFile)).unwrap();
             return None;
         }
         return Some(file);
     }
 }
 
-enum StreamCommand{
+
+
+pub enum StreamCommand{
     Load(FileId,PathBuf),
     LoadStr(FileId,PathBuf),
     Quit,
 }
 
-#[derive(Debug)]
-enum StreamError{
-    FileDoesNotExist,
-    PermissionDeneid,
-    NotAFile,
-    Other,
-}
-
-impl StreamError{
-    fn from_error(error: Error) -> Self{
-        match error.kind(){
-            ErrorKind::NotFound => StreamError::FileDoesNotExist,
-            ErrorKind::PermissionDenied => StreamError::PermissionDeneid,
-            _ => StreamError::Other,
-        }
-
-    }
-}
-
-enum StreamMessage{
+pub enum StreamMessage{
     Done(FileId,Vec<u8>),
     DoneStr(FileId,String),
-    Error(FileId,StreamError),
+    Error(FileId,IOError),
 }
 
 pub struct StreamManager{
@@ -133,6 +116,22 @@ impl StreamManager{
             sender: com_send,
             reciever: mess_recv,
         }
+    }
+
+    pub fn get(&self) -> Option<StreamMessage>{
+        match self.reciever.try_recv(){
+            Ok(x) => {Some(x)},
+            Err(e) => {
+                match e{
+                    TryRecvError::Empty => {None},
+                    TryRecvError::Disconnected => {panic!("IO thread disconnected while recieving!");},
+                }
+            }
+        }
+    }
+
+    pub fn send(&self,sc: StreamCommand){
+        self.sender.send(sc).expect("IO thread disconnected while sending!");
     }
 }
 
