@@ -1,0 +1,6 @@
+This is a test file for testing.
+if this file is removed or changed the io test
+in io/mod.rs will fail.
+Please dont change this file.
+Also dont change the variable containing this
+text in io/mod.rs or else the test will fail.

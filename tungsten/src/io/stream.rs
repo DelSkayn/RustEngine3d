@@ -85,13 +85,14 @@ impl FileStream {
 }
 
 
-
+#[derive(Debug)]
 pub enum StreamCommand{
     Load(FileId,PathBuf),
     LoadStr(FileId,PathBuf),
     Quit,
 }
 
+#[derive(Debug)]
 pub enum StreamMessage{
     Done(FileId,Vec<u8>),
     DoneStr(FileId,String),
@@ -124,11 +125,23 @@ impl StreamManager{
             Err(e) => {
                 match e{
                     TryRecvError::Empty => {None},
-                    TryRecvError::Disconnected => {panic!("IO thread disconnected while recieving!");},
+                    TryRecvError::Disconnected => {
+                        panic!("IO thread disconnected while recieving!");
+                    },
                 }
-            }
+            },
         }
     }
+
+    pub fn get_wait(&self) -> StreamMessage{
+        match self.reciever.recv(){
+            Ok(x) => {x},
+            Err(_) => {
+                panic!("IO thread disconnected while recieving!");
+            },
+        }
+    }
+
 
     pub fn send(&self,sc: StreamCommand){
         self.sender.send(sc).expect("IO thread disconnected while sending!");

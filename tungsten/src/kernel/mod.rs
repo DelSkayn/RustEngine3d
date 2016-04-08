@@ -77,7 +77,6 @@ mod test{
 
     impl Task for HelloTask{
         fn execute(&mut self,_:&AsyncRoot) -> Result<(),TaskError>{
-            println!("Hello world: {}",self.test);
             Ok(())
         }
     }
@@ -100,7 +99,6 @@ mod test{
         let root = Root::new(HelloGame);
         let mut kernel = Kernel::new(&root);
         kernel.add_system(Box::<HelloWorld>::new(HelloWorld));
-        println!("Running");
         kernel.run();
     }
 
@@ -174,7 +172,7 @@ mod test{
     }
     impl Task for FibboTask{
         fn execute(&mut self,_:&AsyncRoot) -> Result<(),TaskError>{
-            println!("fibbo,{} = {}",self.test,fibbo(self.test));
+            fibbo(self.test);
             Ok(())
         }
     }
@@ -197,7 +195,6 @@ mod test{
         let root = Root::new(HelloGame);
         let mut kernel = Kernel::new(&root);
         kernel.add_system(Box::new(FibboWorld));
-        println!("Running");
         kernel.run();
     }
 }

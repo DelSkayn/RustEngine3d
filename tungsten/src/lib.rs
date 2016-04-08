@@ -55,7 +55,7 @@ use render::RenderSystem;
 use render::GfxRenderer;
 
 mod io;
-pub use io::IOData;
+pub use io::IoManager;
 
 mod res;
 //use res::ResourcesSystem;

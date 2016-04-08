@@ -2,7 +2,7 @@
 use super::Game;
 use super::Platform;
 use super::Settings;
-use super::IOData;
+use super::IoManager;
 
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ pub struct SyncRoot{
     /// Settings of versious things in the engine
     pub settings: Settings,
 
-    pub io: IOData,
+    pub io: IoManager,
 }
 
 pub struct AsyncRoot{
@@ -47,7 +47,7 @@ impl Root{
             sync: SyncRoot{
                 game: Box::new(game),
                 settings: Settings::new(),
-                io: IOData::new(),
+                io: IoManager::new(),
             },
             async: Arc::new(AsyncRoot{
                 platform: Platform::new(),
