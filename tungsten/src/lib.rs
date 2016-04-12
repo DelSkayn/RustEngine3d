@@ -7,6 +7,8 @@
 #![crate_name = "tungsten"]
 #![crate_type = "lib"]
 #![allow(dead_code)]
+
+#![feature(custom_derive,plugin)]
 //#![deny(missing_docs)]
 
 //uuhhhh
@@ -16,8 +18,12 @@ extern crate gfx;
 
 #[macro_use]
 extern crate log as log_ext;
+#[macro_use]
+extern crate lazy_static;
 extern crate time;
 extern crate crossbeam;
+extern crate serde;
+extern crate serde_json;
 
 mod util;
 
@@ -29,8 +35,6 @@ pub use game::Game;
 
 mod root;
 pub use root::Root;
-pub use root::SyncRoot;
-pub use root::AsyncRoot;
 
 mod platform;
 pub use platform::Platform;
@@ -47,20 +51,18 @@ pub use kernel::Task;
 pub use kernel::TaskBuilder;
 use kernel::Kernel;
 
-mod window;
-use window::WindowSystem;
+//mod window;
+//use window::Window;
 
-mod render;
-use render::RenderSystem;
-use render::GfxRenderer;
+//mod render;
+//use render::RenderSystem;
+//use render::GfxRenderer;
 
 mod io;
-pub use io::IoManager;
+pub use io::Io;
 
-mod res;
-//use res::ResourcesSystem;
+use std::sync::Arc;
 
-//mod event_queue;
 
 pub struct Engine;
 
@@ -79,13 +81,7 @@ impl Engine{
         println!("--------------------------------------------------------------------------");
         println!("Tungsten starting!");
         SimpleLogger::init().unwrap();
-        let mut root = Root::new(game);
-        let (window,device,factory) = WindowSystem::new(&root);
-        let renderer = GfxRenderer::new(device,factory,root.sync.settings.graphics.window_size);
-        let render_sys = RenderSystem::new(renderer);
-        let mut kernel = Kernel::new(&mut root);
-        kernel.add_system(Box::new(window));
-        kernel.add_system(Box::new(render_sys));
+        let mut kernel = Kernel::new();
         kernel.run();
         info!("Engine closed.");
     }

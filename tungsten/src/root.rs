@@ -2,11 +2,6 @@
 use super::Game;
 use super::Platform;
 use super::Settings;
-use super::IoManager;
-
-use std::sync::Arc;
-
-use super::render::RenderRoot;
 
 use super::util::Running;
 
@@ -17,26 +12,17 @@ use super::util::Running;
 ///internaly mutable.
 ///
 pub struct Root{
-    pub async: Arc<AsyncRoot>,
-    pub sync: SyncRoot,
+    /// Information about the platform the engine is running on.
+    pub platform: Platform,
+    /// An object used to determin if the object should continue running.
+    pub running: Running, 
+    pub game: Box<Game>,
 }
 
 pub struct SyncRoot{
     /// Object of the game the engine is running.
-    pub game: Box<Game>,
     /// Settings of versious things in the engine
     pub settings: Settings,
-
-    pub io: IoManager,
-}
-
-pub struct AsyncRoot{
-    /// Information about the platform the engine is running on.
-    pub platform: Platform,
-    /// Data used by rendering engine and everyone who needs to submit renderdata.
-    pub render: RenderRoot,
-    /// An object used to determin if the object should continue running.
-    pub running: Running, 
 }
 
 impl Root{
@@ -44,16 +30,9 @@ impl Root{
     pub fn new<G: Game + Sized + 'static>(game: G) -> Self{
         info!("Root created.");
         Root{
-            sync: SyncRoot{
-                game: Box::new(game),
-                settings: Settings::new(),
-                io: IoManager::new(),
-            },
-            async: Arc::new(AsyncRoot{
-                platform: Platform::new(),
-                running: Running::new(),
-                render: RenderRoot::new(),
-            }),
+            game: Box::new(game),
+            platform: Platform::new(),
+            running: Running::new(),
         }
     }
 }

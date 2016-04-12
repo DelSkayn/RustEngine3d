@@ -1,14 +1,21 @@
 use std::thread;
+use std::thread::Thread;
 use std::thread::JoinHandle;
+
+use std::cell::UnsafeCell;
 
 use std::fs::File;
 
 use std::path::PathBuf;
-
 use std::io::Read;
 
+
+use std::sync::Arc;
+
 use super::FileId;
+use super::FileForm;
 use super::IOError;
+use super::FILES;
 
 use std::sync::mpsc::{
     Receiver,
@@ -17,140 +24,166 @@ use std::sync::mpsc::{
     TryRecvError,
 };
 
+thread_local!(static SENDER: UnsafeCell<Option<Sender<StreamCommand>>> = UnsafeCell::new(None));
+
+lazy_static!{
+    static ref SENDER_REF: HackishRecieverRef = HackishRecieverRef::new();
+}
+
+struct HackishRecieverRef{
+    thread: Option<JoinHandle<()>>,
+    sender: Sender<StreamCommand>,
+}
+
+impl HackishRecieverRef{
+    pub fn new() -> Self{
+        let (com_send,com_recv) = channel();
+        HackishRecieverRef{
+            thread: Some(thread::spawn(||{
+                FileStream::run(com_recv);
+            })),
+            sender: com_send,
+        }
+    }
+}
+
+impl Drop for HackishRecieverRef{
+    fn drop(&mut self){
+        self.sender.send(StreamCommand::Quit).unwrap();
+        self.thread.take().unwrap().join().unwrap();
+    }
+}
+
+unsafe impl Sync for HackishRecieverRef{}
+
+#[derive(Debug)]
+pub struct LoadData{
+    pub id: FileId,
+    pub path: PathBuf,
+    pub park: Option<Thread>,
+}
+
+impl LoadData{
+    fn finish(&self){
+    }
+}
+
 struct FileStream;
 
 impl FileStream {
-    fn run(reciever: Receiver<StreamCommand>,sender:Sender<StreamMessage>){
+    fn run(reciever: Receiver<StreamCommand>){
         for e in reciever{
             match e{
                 StreamCommand::Quit => {break},
-                StreamCommand::Load(file_id,path) => Self::load(file_id,path,&sender),
-                StreamCommand::LoadStr(file_id,path) => Self::load_str(file_id,path,&sender),
+                StreamCommand::Load(f) => Self::load(f),
+                StreamCommand::LoadStr(f) => Self::load_str(f),
                 //_ => unimplemented!(),
             }
         }
     }
 
-    fn load(file_id: FileId,path: PathBuf,sender: &Sender<StreamMessage>){
-        if let Some(mut file) = Self::get_file(&file_id,path,sender){
+    fn load(f: LoadData){
+        if let Some(mut file) = Self::get_file(&f){
             let mut buf = Vec::new();
             match file.read_to_end(&mut buf){
                 Ok(_) => {},
                 Err(err) => {
-                    error!("Error while reading file {:?}",err);
-                    sender.send(StreamMessage::Error(file_id,IOError::from_error(err))).unwrap();
+                    warn!("Error while reading file {:?}",err);
+                    let err = IOError::from_error(err);
+                    Self::write(f.id,FileForm::Error(err));
+                    if let Some(ref t) = f.park{
+                        t.unpark();
+                    }
                     return;
                 }
             };
-            sender.send(StreamMessage::Done(file_id,buf)).unwrap();
+            Self::write(f.id,FileForm::Raw(buf));
+            if let Some(ref t) = f.park{
+                t.unpark();
+            }
         }
     }
 
-    fn load_str(file_id: FileId,path: PathBuf,sender: &Sender<StreamMessage>){
-        if let Some(mut file) = Self::get_file(&file_id,path,sender){
+    fn load_str(f: LoadData){
+        if let Some(mut file) = Self::get_file(&f){
             let mut buf = String::new();
             match file.read_to_string(&mut buf){
                 Ok(_) => {},
                 Err(err) => {
                     error!("Error while reading file {:?}",err);
-                    sender.send(StreamMessage::Error(file_id,IOError::from_error(err))).unwrap();
+                    let err = IOError::from_error(err);
+                    Self::write(f.id,FileForm::Error(err));
+                    if let Some(ref t) = f.park{
+                        t.unpark();
+                    }
                     return;
                 }
             };
-            sender.send(StreamMessage::DoneStr(file_id,buf)).unwrap();
+            Self::write(f.id,FileForm::Str(buf));
+            if let Some(ref t) = f.park{
+                t.unpark();
+            }
         }
     }
 
-    fn get_file(file_id: &FileId,path: PathBuf,sender: &Sender<StreamMessage>) -> Option<File>{
-        let file = match File::open(path){
+    fn get_file(f: &LoadData) -> Option<File>{
+        let file = match File::open(f.path.clone()){
             Ok(file) => file,
             Err(e) => {
-                sender.send(StreamMessage::Error(file_id.clone(),IOError::from_error(e))).unwrap();
+                let err = IOError::from_error(e);
+                Self::write(f.id.clone(),FileForm::Error(err));
+                if let Some(ref t) = f.park{
+                    t.unpark();
+                }
                 return None;
             }
         };
         let metadata = match file.metadata(){
             Ok(meta) => meta,
             Err(e) => {
-                sender.send(StreamMessage::Error(file_id.clone(),IOError::from_error(e))).unwrap();
+                let err = IOError::from_error(e);
+                Self::write(f.id.clone(),FileForm::Error(err));
+                if let Some(ref t) = f.park{
+                    t.unpark();
+                }
                 return None;
             }
         };
         if metadata.is_dir(){
-            sender.send(StreamMessage::Error(file_id.clone(),IOError::NotAFile)).unwrap();
+            Self::write(f.id.clone(),FileForm::Error(IOError::NotAFile));
+            if let Some(ref t) = f.park{
+                t.unpark();
+            }
             return None;
         }
         return Some(file);
+    }
+
+    fn write(file_id: FileId,file :FileForm){
+        FILES.write().expect("File lock poisend!").insert(file_id.inner(),Arc::new(file));
     }
 }
 
 
 #[derive(Debug)]
 pub enum StreamCommand{
-    Load(FileId,PathBuf),
-    LoadStr(FileId,PathBuf),
+    Load(LoadData),
+    LoadStr(LoadData),
     Quit,
 }
 
-#[derive(Debug)]
-pub enum StreamMessage{
-    Done(FileId,Vec<u8>),
-    DoneStr(FileId,String),
-    Error(FileId,IOError),
-}
+pub struct Stream;
 
-pub struct StreamManager{
-    thread: Option<JoinHandle<()>>,
-    sender: Sender<StreamCommand>,
-    reciever: Receiver<StreamMessage>,
-}
-
-impl StreamManager{
-
-    pub fn new() -> Self{
-        let (com_send,com_recv) = channel();
-        let (mess_send,mess_recv) = channel();
-        StreamManager{
-            thread: Some(thread::spawn(||{
-                FileStream::run(com_recv,mess_send);
-            })),
-            sender: com_send,
-            reciever: mess_recv,
-        }
-    }
-
-    pub fn get(&self) -> Option<StreamMessage>{
-        match self.reciever.try_recv(){
-            Ok(x) => {Some(x)},
-            Err(e) => {
-                match e{
-                    TryRecvError::Empty => {None},
-                    TryRecvError::Disconnected => {
-                        panic!("IO thread disconnected while recieving!");
-                    },
+impl Stream{
+    pub fn send(sc: StreamCommand){
+        SENDER.with(|value|{
+            unsafe{
+                if let None = *value.get(){
+                    *value.get() = Some(SENDER_REF.sender.clone());
                 }
-            },
-        }
-    }
-
-    pub fn get_wait(&self) -> StreamMessage{
-        match self.reciever.recv(){
-            Ok(x) => {x},
-            Err(_) => {
-                panic!("IO thread disconnected while recieving!");
-            },
-        }
-    }
-
-
-    pub fn send(&self,sc: StreamCommand){
-        self.sender.send(sc).expect("IO thread disconnected while sending!");
+                (*value.get()).as_ref().unwrap().send(sc).expect("IO thread disconnected while sending!");
+            }
+        });
     }
 }
 
-impl Drop for StreamManager{
-    fn drop(&mut self){
-        self.sender.send(StreamCommand::Quit).unwrap();
-        self.thread.take().unwrap().join().unwrap();
-    }
-}

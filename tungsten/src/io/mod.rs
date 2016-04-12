@@ -1,5 +1,12 @@
 use std::collections::HashMap;
 
+use std::thread;
+
+use std::sync::RwLock;
+use std::sync::Arc;
+
+use std::convert::AsRef;
+
 use std::path::PathBuf;
 use std::path::Path;
 
@@ -10,13 +17,18 @@ use std::hash::Hasher;
 
 use super::util::HashAlgo;
 use super::util::NoHashBuilder; 
+
 mod stream;
-use self::stream::StreamManager;
-use self::stream::StreamMessage;
+use self::stream::Stream;
+use self::stream::LoadData;
 use self::stream::StreamCommand;
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct FileId(u64);
+
+lazy_static!{
+    static ref FILES: RwLock<HashMap<u64,Arc<FileForm>,NoHashBuilder>> = RwLock::new(HashMap::with_hasher(NoHashBuilder::new()));
+}
 
 
 impl FileId{
@@ -57,107 +69,58 @@ impl IOError{
     }
 }
 
-pub struct IoManager{
-    files: HashMap<u64,FileData,NoHashBuilder>,
-    stream: StreamManager,
+pub struct Io;
+
+pub fn load<P: AsRef<Path>>(path: P) -> FileId{
+    let id = FileId::from_path(path.as_ref());
+    Stream::send(StreamCommand::Load(LoadData{
+        id: id.clone(),
+        path: path.as_ref().to_path_buf(),
+        park: None,
+    }));
+    id
 }
 
-impl IoManager{
-    pub fn new() -> Self{
-        IoManager{
-            //local_dir: env::current_dir().unwrap(),//should not be here... maybe
-            files: HashMap::with_hasher(NoHashBuilder::new()),
-            stream: StreamManager::new(),
-        }
-    }
-
-    pub fn load(&mut self,path: PathBuf) -> FileId{
-        let id = FileId::from_path(&path);
-        self.files.insert(id.inner(),FileData{
-            path: path.clone(),
-            file: None,
-        });
-        self.stream.send(StreamCommand::Load(id.clone(),path));
-        id
-    }
-
-    pub fn load_str(&mut self,path: PathBuf) -> FileId{
-        let id = FileId::from_path(&path);
-        self.files.insert(id.inner(),FileData{
-            path: path.clone(),
-            file: None,
-        });
-        self.stream.send(StreamCommand::LoadStr(id.clone(),path));
-        id
-    }
-
-    pub fn get(&mut self,id: FileId) -> &mut FileData{
-        self.cycle();
-        self.files.get_mut(&id.inner()).unwrap()
-    }
-
-    pub fn get_wait(&mut self,id: FileId) -> &mut FileData{
-        self.cycle_wait(&id);
-        self.files.get_mut(&id.inner()).unwrap()
-    }
-
-    pub fn remove(&mut self,id: FileId) -> Option<FileData>{
-        self.files.remove(&id.inner())
-    }
-
-    fn cycle(&mut self){
-        while let Some(x) = self.stream.get(){
-            match x {
-                StreamMessage::Done(id,data) =>{
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Raw(data));
-                },
-                StreamMessage::DoneStr(id,data) =>{
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Str(data));
-                },
-                StreamMessage::Error(id,error) => {
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Error(error));
-                },
-            }
-        }
-    }
-
-    fn cycle_wait(&mut self,wait_id: &FileId){
-        loop{
-            let res = self.stream.get_wait();
-            match res {
-                StreamMessage::Done(id,data) =>{
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Raw(data));
-                    if id == *wait_id{
-                        break;
-                    }
-                },
-                StreamMessage::DoneStr(id,data) =>{
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Str(data));
-                    if id == *wait_id{
-                        break;
-                    }
-                },
-                StreamMessage::Error(id,error) => {
-                    self.files.get_mut(&id.inner()).unwrap()
-                        .file = Some(FileForm::Error(error));
-                    if id == *wait_id{
-                        break;
-                    }
-                },
-            }
-        }
-    }
+pub fn load_str<P: AsRef<Path>>(path: P) -> FileId{
+    let id = FileId::from_path(&path.as_ref());
+    Stream::send(StreamCommand::LoadStr(LoadData{
+        id: id.clone(),
+        path: path.as_ref().to_path_buf(),
+        park: None,
+    }));
+    id
 }
 
-pub struct FileData{
-    path: PathBuf,
-    file: Option<FileForm>,
+pub fn load_wait<P: AsRef<Path>>(path: P) -> FileId{
+    let id = FileId::from_path(path.as_ref());
+    Stream::send(StreamCommand::Load(LoadData{
+        id: id.clone(),
+        path: path.as_ref().to_path_buf(),
+        park: Some(thread::current()),
+    }));
+    thread::park();
+    id
 }
+
+pub fn load_wait_str<P: AsRef<Path>>(path: P) -> FileId{
+    let id = FileId::from_path(path.as_ref());
+    Stream::send(StreamCommand::LoadStr(LoadData{
+        id: id.clone(),
+        path: path.as_ref().to_path_buf(),
+        park: Some(thread::current()),
+    }));
+    thread::park();
+    id
+}
+
+pub fn get(id: FileId) -> Option<Arc<FileForm>>{
+    FILES.read().expect("Files lock poisened!!").get(&id.inner()).map(|v| v.clone())
+}
+
+pub fn remove(id: FileId) -> Option<Arc<FileForm>>{
+    FILES.write().expect("Files lock poisened!!").remove(&id.inner())
+}
+
 
 pub enum FileForm{
     Str(String),

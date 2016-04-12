@@ -1,3 +1,4 @@
+/*
 pub use super::super::gfx::{
     Device,
     Resources,
@@ -23,9 +24,6 @@ use super::{
 
 use std::marker::PhantomData;
 
-gfx_constant_struct!(LightInfo{
-    pos: [f32; 4],
-});
 
 gfx_vertex_struct!( BlitVertex{
     pos: [I8Scaled; 3] = "a_pos",
@@ -221,5 +219,4 @@ impl<D: Device,R: Resources,F: Factory<R>> Renderer for GfxRenderer<D,R,F>{
 
     fn load_mesh(&mut self,_mesh: Mesh){}
 }
-
-
+*/

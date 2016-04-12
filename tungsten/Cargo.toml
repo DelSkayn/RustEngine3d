@@ -9,11 +9,13 @@ log = "*"
 time = "*"
 num_cpus = "*"
 crossbeam = "*"
-gfx = "0.9.1"
-gfx_window_glutin = "0.9.1"
-gfx_device_gl = "0.8.1"
-gfx_core= "0.1.1"
-toml = "*"
+gfx = "*"
+gfx_window_glutin = "*"
+gfx_device_gl = "*"
+gfx_core= "*"
+lazy_static = "*"
+serde = "*"
+serde_json = "*"
 
 [profile.dev]
 opt-level = 0
@@ -21,3 +23,4 @@ debug = true
 rpath = false
 lto = false
 debug-assertions = true
+

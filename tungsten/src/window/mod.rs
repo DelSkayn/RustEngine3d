@@ -15,7 +15,7 @@ use super::Root;
 use super::kernel::System;
 use super::kernel::TaskBuilder;
 
-use self::glutin::Window;
+use self::glutin::Window as GluWindow;
 use self::glutin::Event;
 use self::glutin::WindowBuilder;
 
@@ -25,38 +25,35 @@ pub struct WindowData{
     context: Context,
 }
 
-pub struct WindowSystem{
-    internal: Window,
+pub struct Window{
+    internal: GluWindow,
 }
 
-impl WindowSystem{
-    pub fn new(root: &Root) -> (Self,Device,Factory){
+impl Window{
+    pub fn new(root: &Root) -> Self{
         let builder = WindowBuilder::new()
             .with_dimensions(root.sync.settings.graphics.window_size[0] as u32
                             ,root.sync.settings.graphics.window_size[1] as u32)
             .with_title(root.sync.settings.graphics.window_title.clone())
             .with_visibility(false);
 
-        let (window, device,factory,_,_) = 
-            gfx_window_glutin::init::
-            <Rgba8,gfx_core::format::Depth>(builder);
-
+        let window = builder.build();
 
         window.set_position(root.sync.settings.graphics.window_pos[0] as i32
                             ,root.sync.settings.graphics.window_pos[0] as i32);
         window.show();
-        (WindowSystem{
+        Window{
             internal: window,
-        },device,factory)
+        }
     }
 }
 
-impl System for WindowSystem{
-    fn run(&mut self,root: &Root)-> Option<TaskBuilder>{
+impl System for Window{
+    fn run(&mut self)-> Option<TaskBuilder>{
         for event  in self.internal.poll_events(){
             match event{
                 Event::Closed => {
-                    root.async.running.quit();
+                    
                 },
                 _ => {},
             }

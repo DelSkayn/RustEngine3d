@@ -1,7 +1,6 @@
 use super::thread_manager::ThreadManager;
 
 use super::super::Root;
-use super::super::AsyncRoot;
 
 use super::super::util::Running;
 
@@ -38,7 +37,7 @@ impl TaskId{
 pub trait Task: Send + Sync{
     /// Executed when the task needs to be run.
     /// Can fail.
-    fn execute(&mut self,root: &AsyncRoot) -> Result<(),TaskError>;
+    fn execute(&mut self) -> Result<(),TaskError>;
 
     /// Retruns if there needs to be a task executed after this one is 
     /// finished.
@@ -52,7 +51,7 @@ pub trait Task: Send + Sync{
 struct NullTask;
 
 impl Task for NullTask{
-    fn execute(&mut self,_: &AsyncRoot) -> Result<(), TaskError>{
+    fn execute(&mut self) -> Result<(), TaskError>{
         Ok(())
     }
 }
@@ -176,7 +175,7 @@ pub struct TaskManager{
 }
 
 impl TaskManager{
-    pub fn new(amount: usize,root: &Root) -> Self{
+    pub fn new(amount: usize) -> Self{
         let task_que = Arc::new(MsQueue::new());
         let mut threads = ThreadManager::new();
         let thread = thread::current();
@@ -192,11 +191,10 @@ impl TaskManager{
             let queue = task_que.clone();
             let main_thread = thread.clone();
             let run = running.clone();
-            let aroot = root.async.clone();
             threads.add_thread(move ||{
                 while run.should(){
                     let mut task: SendTaskStruct = queue.pop();
-                    match task.task.execute(&aroot){
+                    match task.task.execute(){
                         Ok(_) => {},
                         _ => unimplemented!(),
                     }

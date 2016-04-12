@@ -3,9 +3,6 @@ use super::Root;
 use super::util::AtomicOption;
 use super::kernel::TaskBuilder;
 
-mod gfx_renderer;
-pub use self::gfx_renderer::GfxRenderer;
-
 mod data;
 pub use self::data::*;
 

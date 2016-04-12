@@ -12,23 +12,22 @@ mod thread_manager;
 /// A trait for object which can create tasks.
 pub trait System{
     /// A function called when the system needs to run.
-    fn run(&mut self,root: &Root) -> Option<TaskBuilder>;
+    fn run(&mut self) -> Option<TaskBuilder>;
 }
 
 /// The heart of the engine, the kernel keeps the engine running 
 /// and manages all the tasks.
-pub struct Kernel<'a>{
-    root: &'a Root,
+pub struct Kernel{
     systems: Vec<Box<System>>,
     task_manager: TaskManager,
 }
 
-impl<'a> Kernel<'a>{
-    pub fn new(root: &'a Root) -> Self{
+impl Kernel{
+    pub fn new() -> Self{
         info!("Kernel Created.");
         Kernel{
-            task_manager: TaskManager::new(root.async.platform.cores,root),
-            root: root,
+            //FIXME set platform correctly
+            task_manager: TaskManager::new(8),
             systems: Vec::new(),
         }
     }
@@ -40,9 +39,9 @@ impl<'a> Kernel<'a>{
     pub fn run(&mut self){
         self.systems.shrink_to_fit();
         //Game loop
-        while self.root.async.running.should(){
+        while true{
             for sys in &mut self.systems{
-                if let Some(builder) = sys.run(self.root){
+                if let Some(builder) = sys.run(){
                     self.task_manager.add_tasks(builder);
                 }
                 self.task_manager.update();
