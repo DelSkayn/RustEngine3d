@@ -1,0 +1,14 @@
+{
+  "graphics": {
+    "window_pos": [
+      0,
+      0
+    ],
+    "window_size": [
+      800,
+      600
+    ],
+    "window_title": "Tungsten",
+    "vsync": false
+  }
+}

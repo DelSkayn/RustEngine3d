@@ -1,191 +1,44 @@
-use std::sync::Arc;
-use super::glium::backend::glutin_backend::GlutinFacade;
+use super::System;
+use super::Root;
+use super::util::AtomicOption;
+use super::kernel::TaskBuilder;
 
-use super::kernal::EventHandle;
-use super::kernal::System;
+mod data;
+pub use self::data::*;
 
-use super::Event;
+pub struct RenderObject;
 
-use super::profile::ProfileSample;
-
-use std::fmt;
-
-use super::time;
-
-use super::glium::{
-    VertexBuffer,
-    IndexBuffer,
-    Program,
-    buffer,
-    index,
-    vertex,
-    program,
-};
-
-//use super::glium::draw_parameters::PolygonMode;
-
-
-use super::math::Matrix4f;
-
-pub mod basic;
-pub mod mesh;
-pub mod camera;
-
-
-use self::mesh::MeshVertex;
-use self::mesh::Mesh;
-pub use self::camera::Camera;
-pub use self::basic::BasicRenderer; 
-
-#[derive(Clone,Debug)]
-pub enum RenderEvent{
-    AddQueue(Arc<RenderQueue>),
-    Frame,
-    FrameDone,
+pub struct RenderRoot{
+    render_list: AtomicOption<Vec<RenderObject>>,
 }
 
-pub struct Renderable{
-    vertex: VertexBuffer<MeshVertex>,
-    index: IndexBuffer<u16>,
-}
-
-pub struct RenderMesh{
-    index: usize,
-}
-
-pub struct RenderObject{
-    pub mesh: RenderMesh,
-    pub transform: Matrix4f,
-}
-
-
-pub struct RenderQueue{
-    pub queue: Vec<RenderObject>,
-    pub cam: Camera,
-}
-
-impl fmt::Debug for RenderQueue{
-    fn fmt(&self,f: &mut fmt::Formatter) -> fmt::Result{
-        write!(f,"RenderQueue")
-    }
-}
-
-pub struct Shader{
-    pub shader: Program,
-    //source: String,
-}
-
-#[derive(Debug)]
-pub enum BufferError{
-    FormatNotSupported,
-    OutOfMemory,
-    BufferTypeNotSupported,
-    IndexTypeNotSupported,
-    PrimitiveTypeNotSupported,
-}
-
-impl From<vertex::BufferCreationError> for BufferError{
-    fn from(err: vertex::BufferCreationError) -> Self{
-        match err {
-            vertex::BufferCreationError::FormatNotSupported => BufferError::FormatNotSupported,
-            vertex::BufferCreationError::BufferCreationError(x) => match x{
-                buffer::BufferCreationError::OutOfMemory => BufferError::OutOfMemory,
-                buffer::BufferCreationError::BufferTypeNotSupported => BufferError::BufferTypeNotSupported,
-            }
+impl RenderRoot{
+    pub fn new() -> Self{
+        RenderRoot{
+            render_list: AtomicOption::new(),
         }
     }
 }
 
-impl From<index::BufferCreationError> for BufferError{
-    fn from(err: index::BufferCreationError) -> Self{
-        match err {
-            index::BufferCreationError::IndexTypeNotSupported=> BufferError::IndexTypeNotSupported,
-            index::BufferCreationError::PrimitiveTypeNotSupported=> BufferError::PrimitiveTypeNotSupported,
-            index::BufferCreationError::BufferCreationError(x) => match x{
-                buffer::BufferCreationError::OutOfMemory => BufferError::OutOfMemory,
-                buffer::BufferCreationError::BufferTypeNotSupported => BufferError::BufferTypeNotSupported,
-            }
-        }
-    }
+pub trait Renderer{
+    fn render(&mut self);
+    fn load_mesh(&mut self,mesh: Mesh);
 }
 
-#[derive(Debug)]
-pub enum ShaderCreationError{
-    BinaryHeaderError,
-    CompilationError(String),
-    LinkingError(String),
-    ShaderTypeNotSupported,
-    CompilationNotSupported,
-    TransformFeedbackNotSupported,
-    PointSizeNotSupported,
+pub struct RenderSystem<R: Renderer>{
+    renderer: R,
 }
 
-impl From<program::ProgramCreationError> for ShaderCreationError{
-    fn from(err: program::ProgramCreationError) -> Self{
-        match err {
-            program::ProgramCreationError::BinaryHeaderError => ShaderCreationError::BinaryHeaderError,
-            program::ProgramCreationError::CompilationError(x) => ShaderCreationError::CompilationError(x),
-            program::ProgramCreationError::LinkingError(x) => ShaderCreationError::LinkingError(x),
-            program::ProgramCreationError::ShaderTypeNotSupported => ShaderCreationError::ShaderTypeNotSupported,
-            program::ProgramCreationError::CompilationNotSupported => ShaderCreationError::CompilationNotSupported,
-            program::ProgramCreationError::TransformFeedbackNotSupported => ShaderCreationError::TransformFeedbackNotSupported,
-            program::ProgramCreationError::PointSizeNotSupported => ShaderCreationError::PointSizeNotSupported,
-        }
-    }
-}
-
-pub struct RenderSystem<T: RenderEngine>{
-    render_engine: T,
-    event: EventHandle,
-}
-
-impl<T: RenderEngine> RenderSystem<T>{
-    pub fn new(context: GlutinFacade,event: EventHandle) -> Self{
+impl<R: Renderer> RenderSystem<R>{
+    pub fn new(renderer: R) -> Self{
         RenderSystem{
-            render_engine: T::new(context),
-            event: event,
-        }
-    }
-
-}
-
-impl<T: RenderEngine> System for RenderSystem<T>{
-
-    fn run(&mut self){
-        let _p = ProfileSample::new("Render system run");
-        for e in self.event.into_iter(){
-            match e {
-                Event::Profile(time) =>{
-                    debug!("Profile event render: {}",(time::precise_time_s() - time));
-                }
-                Event::Render(x) => {
-                    match x {
-                        RenderEvent::Frame => {
-                            self.render_engine.render(
-                                RenderQueue{
-                                    queue: Vec::new(),
-                                    cam: Camera::new(),
-                                });
-                            self.event.push(Event::Render(RenderEvent::FrameDone));
-                        },
-                        _ => {},
-                    }
-                },
-                _ => {},
-            }
+            renderer: renderer,
         }
     }
 }
 
-pub trait RenderEngine{
-    fn new(context: GlutinFacade) -> Self;
-
-    fn render(&mut self, renderque: RenderQueue);
-
-    fn create_mesh(&mut self,mesh: &Mesh)-> Result<RenderMesh,BufferError>;
-
-    fn create_shader(&mut self,vs_src: String,
-                     fs_src: String, 
-                     gs_src: Option<String>) -> Result<Program,ShaderCreationError>;
+impl<R: Renderer> System for RenderSystem<R>{
+    fn run(&mut self,_root: &Root) -> Option<TaskBuilder>{
+        None
+    }
 }
-

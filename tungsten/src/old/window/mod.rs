@@ -48,16 +48,4 @@ impl Window{
     }
 }
 
-impl System for Window{
-    fn run(&mut self)-> Option<TaskBuilder>{
-        for event  in self.internal.poll_events(){
-            match event{
-                Event::Closed => {
-                    
-                },
-                _ => {},
-            }
-        }
-        None
-    }
-}
+

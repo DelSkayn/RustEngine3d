@@ -1,7 +1,5 @@
 use super::thread_manager::ThreadManager;
 
-use super::super::Root;
-
 use super::super::util::Running;
 
 use std::sync::Arc;
@@ -13,7 +11,10 @@ use std::collections::VecDeque;
 use std::thread;
 use std::time::Duration;
 
-use crossbeam::sync::MsQueue;
+use crossbeam::sync::chase_lev::{
+    Stealer,
+    Worker,
+};
 
 
 #[derive(Debug)]
@@ -170,13 +171,14 @@ impl TaskBuilder{
 pub struct TaskManager{
     threads: ThreadManager,
     active_task_queue: Arc<MsQueue<SendTaskStruct>>,
+    work_que: Worker<SendTaskStruct>,
+    steal: Vec<Stealer<SendTaskStruct>>,
     running: Arc<Running>,
     pending_task_queue: TaskQueue,
 }
 
 impl TaskManager{
     pub fn new(amount: usize) -> Self{
-        let task_que = Arc::new(MsQueue::new());
         let mut threads = ThreadManager::new();
         let thread = thread::current();
         let running = Arc::new(Running::new());
@@ -187,20 +189,41 @@ impl TaskManager{
             amount
         };
 
+        let ques = Vec::with_capacity(amount);
+        let steal = Vec::with_capacity(amount);
+
         for _ in 0..amount{
-            let queue = task_que.clone();
-            let main_thread = thread.clone();
+            let(w,s) = chase_lev::deque();
+            ques.push(w);
+            steal.push(s);
+        }
+
+        for i in 0..amount{ 
+            let queue = ques.remove(i);
+            let steal = steal.clone();
+            steal.remove(i);
             let run = running.clone();
             threads.add_thread(move ||{
+                let tq = TaskQueue::new();
                 while run.should(){
-                    let mut task: SendTaskStruct = queue.pop();
-                    match task.task.execute(){
-                        Ok(_) => {},
-                        _ => unimplemented!(),
+                    let new = self.tq.get_active();
+                    for task in new{
+                        self.push(task);
                     }
-                    if let Some(x) = task.done{
-                        if x.fetch_sub(1,Ordering::Release) == 1{
-                            main_thread.unpark();
+                    if let Some(t) = queue.try_pop(){
+                        if let Some(task) = t.execute(){
+                            tq.add_tasks(task);
+                        }
+                    }else{
+                        for ref s in steal{
+                            match s.steal(){
+                                Data(task) => {
+                                    if let Some(task) = t.execute(){
+                                        tq.add_tasks(task);
+                                    }
+                                    break;
+                                }
+                            }
                         }
                     }
                 }

@@ -1,48 +1,92 @@
+//!
+//! Tungsten
+//! ========
+//!
+//! Tungsten is a game engine written as a future proof, game engine.
+//!
+#![crate_name = "tungsten"]
+#![crate_type = "lib"]
 #![allow(dead_code)]
 
+#![plugin(serde_macros)]
+#![feature(custom_derive,plugin)]
+
+extern crate serde;
+extern crate serde_json;
+//#![deny(missing_docs)]
+
+//uuhhhh
+//I hate that it needs to be declared here.
+#[macro_use]
+extern crate gfx;
 
 #[macro_use]
-extern crate glium;
-//extern crate cgmath;
+extern crate log as log_ext;
 #[macro_use]
-extern crate log;
-extern crate image;
+extern crate lazy_static;
 extern crate time;
+extern crate crossbeam;
 
-pub mod profile;
-pub mod kernal;
-pub mod console;
-pub mod input;
-pub mod window;
-pub mod engine;
-pub mod math;
-pub mod obj;
-pub mod render;
-pub mod thread_pool;
-pub mod resman;
+mod util;
 
-pub mod game;
+mod log;
+use log::SimpleLogger;
+
+mod game;
 pub use game::Game;
 
-const VERSION_MAJOR: &'static str = env!("CARGO_PKG_VERSION_MAJOR");
-const VERSION_MINOR: &'static str = env!("CARGO_PKG_VERSION_MINOR");
-const VERSION_PATCH: &'static str = env!("CARGO_PKG_VERSION_PATCH");
+mod root;
+pub use root::Root;
+
+mod platform;
+pub use platform::Platform;
+
+mod settings;
+pub use settings::Settings;
+
+//mod event;
+//pub use event::Event;
+
+mod kernel;
+pub use kernel::System;
+pub use kernel::Task;
+pub use kernel::TaskBuilder;
+use kernel::Kernel;
+
+//mod window;
+//use window::Window;
+
+//mod render;
+//use render::RenderSystem;
+//use render::GfxRenderer;
+
+mod io;
+
+const BANNER: &str = r#"
+   ______                                        __                       
+  /\__  _\                                      /\ \__                    
+  \/_/\ \/   __  __    ___       __       ____  \ \ ,_\     __     ___    
+     \ \ \  /\ \/\ \ /' _ `\   /'_ `\    /',__\  \ \ \/   /'__`\ /' _ `\  
+      \ \ \ \ \ \_\ \/\ \/\ \ /\ \L\ \  /\__, `\  \ \ \_ /\  __/ /\ \/\ \ 
+       \ \_\ \ \____/\ \_\ \_\\ \____ \ \/\____/   \ \__\\ \____\\ \_\ \_\
+        \/_/  \/___/  \/_/\/_/ \/___L\ \ \/___/     \/__/ \/____/ \/_/\/_/
+                                 /\____/                                  
+                                 \_/__/                        
+"#
 
 
-#[derive(Clone,Debug)]
-pub enum Event{
-    Profile(f64),
-    Core(CoreEvent),
-    Input(input::InputEvent),
-    Render(render::RenderEvent),
-}
+pub struct Engine;
 
-#[derive(Clone,Debug)]
-pub enum CoreEvent{
-    Quit,
-    Pause,
-    Continue,
-    Frame(u64),
-    FrameDone(u64),
-    Resize(u32,u32),
+impl Engine{
+    pub fn go<G: Game + 'static>(game: G){
+        println!("--------------------------------------------------------------------------");
+        println!(BANNER);
+        println!("--------------------------------------------------------------------------");
+        println!("Tungsten starting!");
+        settings::Settings::set_file("res/settings.json");
+        SimpleLogger::init().unwrap();
+        let mut kernel = Kernel::new();
+        kernel.run();
+        info!("Engine closed.");
+    }
 }

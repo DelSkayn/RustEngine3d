@@ -1,11 +1,9 @@
 
-use super::Root;
 
-mod task_manager;
-pub use self::task_manager::Task;
-pub use self::task_manager::TaskError;
-pub use self::task_manager::TaskBuilder;
-use self::task_manager::TaskManager;
+
+mod task;
+
+
 
 mod thread_manager;
 
@@ -18,9 +16,10 @@ pub trait System{
 /// The heart of the engine, the kernel keeps the engine running 
 /// and manages all the tasks.
 pub struct Kernel{
-    systems: Vec<Box<System>>,
     task_manager: TaskManager,
 }
+
+type StartJob = Fn<Output = TaskBuilder>;
 
 impl Kernel{
     pub fn new() -> Self{
@@ -28,18 +27,16 @@ impl Kernel{
         Kernel{
             //FIXME set platform correctly
             task_manager: TaskManager::new(8),
-            systems: Vec::new(),
         }
     }
 
-    pub fn add_system(&mut self,sys: Box<System>){
-        self.systems.push(sys);
-    }
-
-    pub fn run(&mut self){
+    pub fn run(&mut self,f: StartJob){
         self.systems.shrink_to_fit();
         //Game loop
-        while true{
+        
+        let builder = f();
+        self.task_manager.add_tasks(builder);
+        loop{
             for sys in &mut self.systems{
                 if let Some(builder) = sys.run(){
                     self.task_manager.add_tasks(builder);
@@ -58,8 +55,6 @@ mod test{
     use super::*;
     use super::super::game::Game;
     use super::super::Root;
-
-    use super::super::AsyncRoot;
 
     use std::sync::Arc;
     //use std::cell::UnsafeCell;

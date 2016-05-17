@@ -1,58 +1,64 @@
-//! 
-//! This module handle game engine options. 
-//! For now it is mostly a struct containing some data, 
-//! but eventually it will also deal with loading a config file and managing runtime changes.
-//!
-//!
-
 use std::sync::RwLock;
-
-use std::convert::AsRef;
-
-use std::default::Default;
+use std::collections::HashMap;
 
 use std::path::Path;
+use std::path::PathBuf;
+
+use std::any::Any;
 
 lazy_static!{
-    static ref SETTINGS: RwLock<SettingsInner> = {
-        RwLock::new(SettingsInner::default())
-    };
+    static ref SETTINGS: RwLock<Settings> 
+        = RwLock::new(Default::default());
+    static ref SETTINGS_FILE: RwLock<PathBuf> 
+        = RwLock::new(Path::new("config/settings.json").to_path_buf());
 }
 
-///
-/// A struct containing all the settings in the engine divided in catagories as 
-/// seen in option menus.
-///
-pub struct Settings;
+#[derive(Serialize,Deserialize)]
+pub struct Settings(HashMap<String,Box<Any + Sized>>);
 
-
-#[derive(Default,Serialize,Deserialize)]
-pub struct SettingsInner{
-    /// Options for the graphic part of the engine.
-    pub graphics: Graphics,
-}
+unsafe impl Sync for Settings{}
+unsafe impl Send for Settings{}
 
 impl Settings{
-    pub fn set_file<P: AsRef<Path>>(path: P){
+    fn new() -> Self{
+        Settings(HashMap::new());
+    }
+
+    pub fn get_self<T:Clone + Sync + Send + Sized,S: AsRef<str>>(&self,name: S) -> T{
+        self.0.get(name.to_string())
+            .expect("Setting \"{}\" does not exist",name)
+            .downcast_ref()
+            .expect("Setting \"{}\" does not have the correct type",name)
+            .clone();
+    }
+
+    pub fn get<T:Clone + Sync + Send + Sized,S: AsRef<str>>(name: S) -> T{
+        SETTINGS.read().get_self(name)
+    }
+
+    pub fn set<T:Clone + Sync + Send + Sized,S: AsRef<str>>(&self, name: S,value: T){
+        self.0.insert(name,Box::new(value));
+    }
+
+    pub fn register(settings: Settings){
+        *SETTINGS.write() = settings;
+    }
+
+    pub fn set_settings_file<P: AsRef<Path>>(path: P){
+        *SETTINGS_FILE.write() = path.to_path_buf();
+    }
+
+    pub fn read_from_file(){
+        unimplemented!();
     }
 }
 
-/// struct containing options for the graphic part of the engine.
-#[derive(Serialize,Deserialize)]
-pub struct Graphics{
-    pub window_pos: [u32;2],
-    pub window_size: [u32;2],
-    pub window_title: String,
-    pub vsync: bool,
-}
-
-impl Default for Graphics{
+impl Default for Settings{
     fn default() -> Self{
-        Graphics{
-            window_pos: [0,0],
-            window_size: [800,600],
-            window_title: "Tungsten".to_string(),
-            vsync: false,
-        }
+        let res = Settings::new();
+        res.set("window_size",[800u64,600u64]);
+        res.set("window_pos" ,[0u64,0u64]);
+        res.set("vsync",false);
+        res
     }
 }
