@@ -19,14 +19,17 @@ pub struct Engine<G: Game>{
 }
 
 impl<G: Game> Engine<G>{
-    pub fn Go(g: G){
+    #[allow(non_snake_case)]
+    pub fn Go(){
         println!("--------------------------------------------------------------------------");
         println!("{}",BANNER);
         println!("--------------------------- Engine Starting! -----------------------------");
+    
+        let _game = G::new();
 
         Settings::read_from_file();
     }
 
-    pub fn game_loop(&mut self){
+    fn game_loop(){
     }
 }

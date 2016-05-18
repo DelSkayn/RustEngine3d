@@ -14,8 +14,9 @@ extern crate lazy_static;
 
 mod settings;
 mod engine;
+mod io;
 pub use engine::Engine;
 
-trait Game{
-    fn init(&mut self);
+pub trait Game{
+    fn new() -> Self;
 }
