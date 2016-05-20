@@ -13,6 +13,7 @@ lazy_static = "*"
 serde = "*"
 serde_json = "*"
 serde_macros = "*"
+task = { git = "https://gitlab.com/DelSkayn/task-rs.git" }
 
 [profile.dev]
 opt-level = 0

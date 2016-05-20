@@ -8,19 +8,21 @@ use std::io::Write;
 
 use std::path::Path;
 use std::path::PathBuf;
-use std::thread::{JoinHandle,self};
-use super::File as ThreadFile;
 
+use std::env;
+use std::thread::{JoinHandle,self};
 use std::fs::File;
 use std::io::ErrorKind;
 
+use super::FileWrite;
+use super::FileRead;
 use super::Result;
 use super::Error;
 
 pub enum IoMessage{
-    Read(ThreadFile,PathBuf),
-    Create(ThreadFile,PathBuf),
-    Write(ThreadFile,PathBuf),
+    Read(FileRead,PathBuf),
+    Create(FileWrite,Vec<u8>,PathBuf),
+    Write(FileWrite,Vec<u8>,PathBuf),
     Quit,
 }
 
@@ -57,28 +59,22 @@ impl IoThread{
 }
 
 fn thread_loop(que: Arc<MsQueue<IoMessage>>){
+    info!("Starting io thread.");
+    info!("Execution dir: \"{}\".",env::current_dir().unwrap()
+             .to_str().unwrap());
     loop{
         match que.pop(){
             IoMessage::Read(file,path) => {
-                file.0.done(read(&path));
+                file.0.file.complete(read(&path));
+                file.0.sleep.awake();
             },
-            IoMessage::Write(file,path) => {
-                unsafe{
-                    let buf = (*file.0.file.get()).take().unwrap().unwrap();
-                    match write(buf,&path){
-                        Err(e) => {(*file.0.file.get()) = Some(Err(e))},
-                        _ => {}
-                    }
-                }
+            IoMessage::Write(file,data,path) => {
+                file.0.file.complete(write(data,&path));
+                file.0.sleep.awake();
             },
-            IoMessage::Create(file,path) => {
-                unsafe{
-                    let buf = (*file.0.file.get()).take().unwrap().unwrap();
-                    match create(buf,&path){
-                        Err(e) => {(*file.0.file.get()) = Some(Err(e))},
-                        _ => {}
-                    }
-                }
+            IoMessage::Create(file,data,path) => {
+                file.0.file.complete(create(data,&path));
+                file.0.sleep.awake();
             },
             IoMessage::Quit => {
                 debug!("Io thread quiting!");
@@ -107,6 +103,7 @@ fn read(path: &Path) -> Result<Vec<u8>>{
     }));
     Ok(buf)
 }
+
 fn write(buff: Vec<u8>,path: &Path) -> Result<()>{
     let mut file = try!(File::open(path).map_err(|e|{
         match e.kind(){
@@ -127,16 +124,21 @@ fn write(buff: Vec<u8>,path: &Path) -> Result<()>{
 }
 
 fn create(buff: Vec<u8>,path: &Path) -> Result<()>{
-    let mut file = try!(File::create(path).map_err(|_|{
-        Error::Other
+    let mut file = try!(File::create(path).map_err(|e|{
+        match e.kind(){
+            ErrorKind::NotFound => Error::NotFound,
+            _ => Error::Other,
+        }
     }));
     let meta = try!(file.metadata().map_err(|_|{
+        println!("2");
         Error::Other
     }));
     if meta.is_dir(){
         return Err(Error::NotAFile);
     }
     try!(file.write_all(&buff).map_err(|_|{
+        println!("3");
         Error::Other
     }));
     Ok(())

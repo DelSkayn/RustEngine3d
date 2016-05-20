@@ -1,7 +1,6 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-
 use std::cell::UnsafeCell;
 
 use std::path::Path;
@@ -22,8 +21,6 @@ lazy_static!{
 
 use std::result::Result as StdResult;
 
-pub type Result<T> = StdResult<T,Error>;
-
 #[derive(Debug)]
 pub enum Error{
     NotFound,
@@ -32,110 +29,165 @@ pub enum Error{
     Other,
 }
 
+pub type Result<T> = StdResult<T,Error>;
 
-struct FileInner{
+
+struct ReadData{
     file: UnsafeCell<Option<Result<Vec<u8>>>>,
     complete: AtomicBool,
-    block: AtomicBool,
-    thread: UnsafeCell<Option<Thread>>,
 }
 
-unsafe impl Send for FileInner{}
-unsafe impl Sync for FileInner{}
+struct SleepData{
+    thread: UnsafeCell<Option<Thread>>,
+    block: AtomicBool,
+}
 
-impl FileInner{
+struct WriteData{
+    complete: AtomicBool,
+    file: UnsafeCell<Option<Result<()>>>,
+}
+
+unsafe impl Send for ReadData{}
+unsafe impl Sync for ReadData{}
+
+unsafe impl Send for SleepData{}
+unsafe impl Sync for SleepData{}
+
+unsafe impl Send for WriteData{}
+unsafe impl Sync for WriteData{}
+
+impl ReadData{
     fn new() -> Self{
-        FileInner{
+        ReadData{
             file: UnsafeCell::new(None),
             complete: AtomicBool::new(false),
-            block: AtomicBool::new(false),
-            thread: UnsafeCell::new(None),
         }
     }
 
-    fn with_buff(vec: Vec<u8>) -> Self{
-        FileInner{
-            file: UnsafeCell::new(Some(Ok(vec))),
+    fn done(&self) -> bool{
+        self.complete.load(Ordering::Acquire)
+    }
+
+    fn complete(&self,res: Result<Vec<u8>>){
+        unsafe{(*self.file.get()) = Some(res)};
+        self.complete.store(true,Ordering::Release);
+    }
+
+    fn into_inner(&self) -> Result<Vec<u8>>{
+        if !self.done(){
+            panic!("Tried to unwrap file before it was loaded");
+        }
+        unsafe{(*self.file.get()).take().unwrap()}
+    }
+}
+
+impl WriteData{
+    fn new() -> Self{
+        WriteData{
+            file: UnsafeCell::new(None),
             complete: AtomicBool::new(false),
-            block: AtomicBool::new(false),
+        }
+    }
+
+    fn done(&self) -> bool{
+        self.complete.load(Ordering::Acquire)
+    }
+
+    fn complete(&self,res: Result<()>){
+        unsafe{(*self.file.get()) = Some(res)};
+        self.complete.store(true,Ordering::Release);
+    }
+
+    fn into_inner(&self) -> Result<()>{
+        if !self.done(){
+            panic!("Tried to unwrap file before it was loaded");
+        }
+        unsafe{(*self.file.get()).take().unwrap()}
+    }
+}
+
+impl SleepData{
+    fn new() -> Self{
+        SleepData{
             thread: UnsafeCell::new(None),
+            block: AtomicBool::new(false),
         }
     }
 
     fn sleep(&self){
-        unsafe{
-            println!("called");
-            (*self.thread.get()) = Some(thread::current());
-            self.block.store(true,Ordering::Release);
-            if !self.complete.load(Ordering::Acquire){
-                thread::park();
-            }
-            self.block.store(false,Ordering::Release);
-        }
+        self.block.store(true,Ordering::Release);
+        unsafe{(*self.thread.get()) = Some(thread::current())};
+        thread::park();
+        self.block.store(false,Ordering::Release);
     }
 
-    fn wake(&self){
-        if self.block.load(Ordering::Acquire){
-            let t = unsafe{(*self.thread.get()).take().unwrap()};
-            while self.block.load(Ordering::Acquire){
-                t.unpark();
+    fn awake(&self){
+        while self.block.load(Ordering::Acquire){
+            unsafe{
+                match (*self.thread.get()).take(){
+                    Some(thread) => thread.unpark(),
+                    None => {},
+                }
             }
         }
-    }
-
-    fn done(&self,f: Result<Vec<u8>>){
-        unsafe{
-            *self.file.get() = Some(f);
-        }
-        self.complete.store(true,Ordering::Release);
-        self.wake();
     }
 }
 
-#[derive(Clone)]
-pub struct File(Arc<FileInner>);
+pub struct FileWriteInner{
+    sleep: SleepData,
+    file: WriteData, 
+}
 
-impl File{
+impl FileWriteInner{
+    fn new() -> Self{
+        FileWriteInner{
+            sleep: SleepData::new(),
+            file: WriteData::new(),
+        }
+    }
+}
+
+impl FileReadInner{
+    fn new() -> Self{
+        FileReadInner{
+            sleep: SleepData::new(),
+            file: ReadData::new(),
+        }
+    }
+}
+
+pub struct FileReadInner{
+    sleep: SleepData,
+    file: ReadData, 
+}
+
+pub struct FileWrite(Arc<FileWriteInner>);
+
+pub struct FileRead(Arc<FileReadInner>);
+
+impl FileWrite{
     pub fn is_done(&self) -> bool{
-        self.0.complete.load(Ordering::Acquire)
+        self.0.file.done()
     }
 
-    pub fn done_data(self) -> Result<Vec<u8>>{
-        if !self.is_done(){
-            self.0.sleep();
+    pub fn into_inner(self) -> Result<()>{
+        if !self.0.file.done(){
+            self.0.sleep.sleep();
         }
-        unsafe{
-            (*self.0.file.get()).take().unwrap()
-        }
-    }
-
-    pub fn done(self) -> Result<()>{
-        unsafe{
-            if !self.is_done(){
-                self.0.sleep();
-            }
-            match (*self.0.file.get()).take(){
-                Some(x) => {
-                    x.map(|_| ())
-                },
-                None => {Ok(())},
-            }
-        }
+        self.0.file.into_inner()
     }
 }
 
-impl Drop for File{
-    fn drop(&mut self){
-        if !self.is_done(){
-            self.0.sleep();
+impl FileRead{
+    pub fn is_done(&self) -> bool{
+        self.0.file.done()
+    }
+
+    pub fn into_inner(self) -> Result<Vec<u8>>{
+        if !self.0.file.done(){
+            self.0.sleep.sleep();
         }
-        unsafe{
-            (*self.0.file.get()).take()
-                .map(|e|{
-                    e.ok()
-                        .expect("Dropped file handle returned an error");
-                });
-        }
+        self.0.file.into_inner()
     }
 }
 
@@ -152,25 +204,25 @@ impl Io{
 }
 
 impl Io{
-    pub fn read<S: AsRef<OsStr>>(path: S) -> File{
+    pub fn read<S: AsRef<OsStr>>(path: S) -> FileRead{
         let path = Path::new(path.as_ref()).to_path_buf();
-        let file = File(Arc::new(FileInner::new()));
-        IO.join.send(IoMessage::Read(file.clone(),path));
-        file
+        let file = Arc::new(FileReadInner::new());
+        IO.join.send(IoMessage::Read(FileRead(file.clone()),path));
+        FileRead(file)
     }
 
-    pub fn write<S: AsRef<OsStr>,B: Into<Vec<u8>>>(path: S,vec: B) -> File{
+    pub fn write<S: AsRef<OsStr>,B: Into<Vec<u8>>>(path: S,vec: B) -> FileWrite{
         let path = Path::new(path.as_ref()).to_path_buf();
-        let file = File(Arc::new(FileInner::with_buff(vec.into())));
-        IO.join.send(IoMessage::Write(file.clone(),path));
-        file
+        let file = Arc::new(FileWriteInner::new());
+        IO.join.send(IoMessage::Write(FileWrite(file.clone()),vec.into(),path));
+        FileWrite(file)
     }
 
-    pub fn create<S: AsRef<OsStr>,B: Into<Vec<u8>>>(path: S,vec: B) -> File{
+    pub fn create<S: AsRef<OsStr>,B: Into<Vec<u8>>>(path: S,vec: B) -> FileWrite{
         let path = Path::new(path.as_ref()).to_path_buf();
-        let file = File(Arc::new(FileInner::with_buff(vec.into())));
-        IO.join.send(IoMessage::Create(file.clone(),path));
-        file
+        let file = Arc::new(FileWriteInner::new());
+        IO.join.send(IoMessage::Create(FileWrite(file.clone()),vec.into(),path));
+        FileWrite(file)
     }
 }
 

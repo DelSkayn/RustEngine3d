@@ -1,11 +1,13 @@
 use super::serde_json;
 
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+
 use std::sync::RwLock;
 use std::collections::HashMap;
 
 use std::path::Path;
-use std::path::PathBuf;
-
+use std::path::PathBuf; 
 use io::Io;
 
 use std::str::FromStr;
@@ -14,7 +16,8 @@ lazy_static!{
     static ref SETTINGS: RwLock<Settings> 
         = RwLock::new(Default::default());
     static ref SETTINGS_FILE: RwLock<PathBuf> 
-        = RwLock::new(Path::new("config/settings.json").to_path_buf());
+        = RwLock::new(Path::new("./config/settings.json").to_path_buf());
+    static ref RUNNING: AtomicBool = AtomicBool::new(true);
 }
 
 pub trait SettingType: Sized{
@@ -144,6 +147,14 @@ impl Settings{
         Settings(HashMap::new())
     }
 
+    pub fn running() -> bool{
+        RUNNING.load(Ordering::Acquire)
+    }
+
+    pub fn quit(){
+        RUNNING.store(false,Ordering::Release);
+    }
+
     pub fn get_self<T,S>(&self,name: S) -> T
         where T: SettingType,
               S: AsRef<str>,
@@ -176,16 +187,19 @@ impl Settings{
     }
 
     pub fn read_from_file(){
-        let res = Io::read(SETTINGS_FILE.read().unwrap().clone())
-            .done_data();
+        let file = SETTINGS_FILE.read().unwrap().clone();
+        let res = Io::read(file.clone())
+            .into_inner();
         let data: Settings = match res{
             Ok(x) => {
+                info!("Loading settings from file: \"{}\".",file.to_str().unwrap());
                 serde_json::from_str(&String::from_utf8(x).unwrap()).unwrap()
             },
             Err(_) => {
+                info!("could not find file \"{}\", creating it.",file.to_str().unwrap());
                 let res = Default::default();
                 Io::create(SETTINGS_FILE.read().unwrap().clone()
-                          ,serde_json::to_vec_pretty(&res).unwrap()).done().unwrap();
+                          ,serde_json::to_vec_pretty(&res).unwrap()).into_inner().unwrap();
                 res
             },
         };
@@ -198,6 +212,8 @@ impl Default for Settings{
         let mut res = Settings::new();
         res.set("window_size",[800u64,600u64]);
         res.set("window_pos" ,[0u64,0u64]);
+        res.set("window_title" ,"Tungsten".to_string());
+        res.set("fullscreen" ,false);
         res.set("vsync",false);
         res
     }
