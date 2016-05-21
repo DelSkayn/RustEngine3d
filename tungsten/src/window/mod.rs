@@ -1,6 +1,6 @@
 extern crate glutin;
 
-use settings::Settings;
+use registry::Registry;
 
 use self::glutin::Window as WindowExt;
 use self::glutin::Event as EventExt;
@@ -13,10 +13,10 @@ pub struct Window{
 impl Window{
     pub fn from_settings() -> Self{
         info!("Creating window from settings!");
-        let dimensions: [u64; 2] = Settings::get("window_size");
-        let vsync = Settings::get("vsync");
-        let position: [u64; 2] = Settings::get("window_pos");
-        let title = Settings::get("window_title");
+        let dimensions: [u64; 2] = Registry::get("window.size").unwrap();
+        let vsync = Registry::get("window.vsync").unwrap();
+        let position: [u64; 2] = Registry::get("window.position").unwrap();
+        let title = Registry::get("window.title").unwrap();
         info!("Window size: {}x{}",dimensions[0],dimensions[1]);
         info!("Window position: {}x{}",position[0],position[1]);
         info!("vsync: {}",vsync);
@@ -43,7 +43,7 @@ impl Window{
         for event in self.window.poll_events(){
             match event{
                 EventExt::Closed => {
-                    Settings::quit();
+                    Registry::quit();
                 },
                 _ => {}
             }

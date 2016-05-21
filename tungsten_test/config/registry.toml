@@ -1,0 +1,9 @@
+
+[window]
+size = [960,1000]
+position = [0,80]
+vsync = true
+title = "tungsten test project"
+
+[very.deeply.nested]
+variable = "test"

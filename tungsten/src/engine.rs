@@ -1,8 +1,8 @@
-use settings::Settings;
+use registry::Registry;
 
-use super::Game;
-use super::window::Window;
-use super::util::Logger;
+use Game;
+use window::Window;
+use util::Logger;
 
 const BANNER: &'static str = r#"
  ______                                        __                       
@@ -28,10 +28,9 @@ impl<G: Game> Engine<G>{
         println!("{}",BANNER);
         println!("--------------------------- Engine Starting! -----------------------------");
     
-        let _game = G::new();
 
         Logger::init().unwrap();
-        Settings::read_from_file();
+        Registry::read_from_file();
         Engine{
             game: G::new(),
             window: Window::from_settings(),
@@ -42,7 +41,7 @@ impl<G: Game> Engine<G>{
     fn game_loop(&mut self){
         loop{
             self.window.update();
-            if !Settings::running(){
+            if !Registry::running(){
                 break;
             }
         }

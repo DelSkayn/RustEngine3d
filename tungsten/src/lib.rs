@@ -8,6 +8,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate time;
 extern crate task;
+extern crate toml;
 
 #[macro_use]
 extern crate log;
@@ -15,14 +16,15 @@ extern crate log;
 extern crate lazy_static;
 
 
-mod settings;
 mod engine;
+mod registry;
 mod io;
 mod window;
 mod util;
 
 
 pub use engine::Engine;
+pub use registry::Registry;
 
 pub trait Game{
     fn new() -> Self;
