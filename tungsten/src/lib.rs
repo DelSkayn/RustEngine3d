@@ -2,12 +2,9 @@
 #![crate_type = "lib"]
 #![allow(dead_code)]
 
-/*
-#![plugin(serde_macros)]
-#![feature(custom_derive,plugin)]
-extern crate serde;
-extern crate serde_json;
-*/
+// extern crate serde;
+// extern crate serde_json;
+//
 extern crate time;
 extern crate task;
 extern crate toml;
@@ -30,6 +27,6 @@ mod logic;
 pub use engine::Engine;
 pub use registry::Registry;
 
-pub trait Game{
+pub trait Game {
     fn new() -> Self;
 }

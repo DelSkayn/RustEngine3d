@@ -7,15 +7,7 @@ use std::fs::File;
 
 use std::sync::Mutex;
 
-use log::{ 
-        LogLevel,
-        SetLoggerError,
-        LogLevelFilter,
-        LogMetadata,
-        Log,
-        LogRecord,
-        self,
-};
+use log::{self, LogLevel, SetLoggerError, LogLevelFilter, LogMetadata, Log, LogRecord};
 
 lazy_static!{
     static ref LOG_FILE_PATH: PathBuf 
@@ -30,29 +22,33 @@ lazy_static!{
 
 use time;
 
+/// the basic logger.
+/// Logs to a file specified by `LOG_FILE_PATH`;
+/// TODO: Add option to change log file.
 pub struct Logger;
 
-impl Log for Logger{
-    fn enabled(&self,meta: &LogMetadata) -> bool{
+impl Log for Logger {
+    fn enabled(&self, meta: &LogMetadata) -> bool {
         meta.level() <= LogLevel::Info
     }
 
-    fn log(&self, record: &LogRecord){
-        if self.enabled(record.metadata()){
-            let test = format!("[{}]{}: {}\n"
-                     ,record.level()
-                     ,time::now().strftime("%X").unwrap()
-                     ,record.args());
+    fn log(&self, record: &LogRecord) {
+        if self.enabled(record.metadata()) {
+            let test = format!("[{}]{}: {}\n",
+                               record.level(),
+                               time::now().strftime("%X").unwrap(),
+                               record.args());
             LOG_FILE.lock().unwrap().write_all(test.as_bytes()).unwrap();;
-            print!("{}",test);
+            print!("{}", test);
         }
     }
 }
 
-impl Logger{
-
-    pub fn init() -> Result<(), SetLoggerError>{
-        log::set_logger(|max_log_level|{
+impl Logger {
+    /// Initializes the logger
+    /// Called once at the start of the engine.
+    pub fn init() -> Result<(), SetLoggerError> {
+        log::set_logger(|max_log_level| {
             max_log_level.set(LogLevelFilter::Info);
             Box::new(Logger)
         })

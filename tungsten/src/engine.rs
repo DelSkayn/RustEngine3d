@@ -7,7 +7,7 @@ use task;
 use window::Window;
 use util::Logger;
 
-use console::{Console,SystemTerminal};
+use console::{Console, SystemTerminal};
 
 const BANNER: &'static str = r#"
  ______                                        __                       
@@ -21,39 +21,37 @@ const BANNER: &'static str = r#"
                                \_/__/                                   
 "#;
 
-pub struct Engine<G: Game + Send>{
+pub struct Engine<G: Game + Send> {
     game: G,
     window: Window,
     console: Console<SystemTerminal>,
 }
 
-impl<G: Game + Send> Engine<G>{
+impl<G: Game + Send> Engine<G> {
     #[allow(non_snake_case)]
-    pub fn Go(){
+    pub fn Go() {
         println!("--------------------------------------------------------------------------");
-        println!("{}",BANNER);
+        println!("{}", BANNER);
         println!("--------------------------- Engine Starting! -----------------------------");
-    
+
 
         Logger::init().unwrap();
         Registry::read_from_file();
         let console = Console::new(SystemTerminal::new());
-        Engine{
-            game: G::new(),
-            window: Window::from_registry(),
-            console:  console,
-        }.game_loop();
+        Engine {
+                game: G::new(),
+                window: Window::from_registry(),
+                console: console,
+            }
+            .game_loop();
         println!("---------------------------- Engine Quit! --------------------------------");
     }
 
-    fn game_loop(&mut self){
-        while Registry::running(){
+    fn game_loop(&mut self) {
+        while Registry::running() {
             let window = &mut self.window;
             let console = &mut self.console;
-            task::join(
-                || window.update()
-                ,||console.update()
-                );
+            task::join(|| window.update(), || console.update());
         }
     }
 }

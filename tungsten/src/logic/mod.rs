@@ -9,7 +9,6 @@ pub use self::component::ComponentStorage;
 #[derive(Eq,PartialEq)]
 struct Entity(u64);
 
-impl Logic{
-    fn update(&mut self){
-    }
+impl Logic {
+    fn update(&mut self) {}
 }
