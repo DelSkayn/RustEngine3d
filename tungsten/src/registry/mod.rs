@@ -147,8 +147,9 @@ impl Default for Registry{
         res.set_self("window.size",[800u64,600u64]);
         res.set_self("window.pos" ,[0u64,0u64]);
         res.set_self("window.title" ,"Tungsten".to_string());
-        res.set_self("fullscreen" ,false);
-        res.set_self("vsync",false);
+        res.set_self("window.fullscreen" ,false);
+        res.set_self("window.vsync",true);
+        res.set_self("general.quit_on_esc",true);
         res
     }
 }

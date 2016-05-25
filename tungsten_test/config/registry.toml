@@ -1,9 +1,9 @@
-
 [window]
-size = [960,1000]
-position = [0,80]
+size = [800,600]
+position = [0,0]
 vsync = true
 title = "tungsten test project"
 
-[very.deeply.nested]
-variable = "test"
+[general]
+quit_on_esc = true
+

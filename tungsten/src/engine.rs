@@ -1,8 +1,13 @@
 use registry::Registry;
 
 use Game;
+
+use task;
+
 use window::Window;
 use util::Logger;
+
+use console::{Console,SystemTerminal};
 
 const BANNER: &'static str = r#"
  ______                                        __                       
@@ -16,12 +21,13 @@ const BANNER: &'static str = r#"
                                \_/__/                                   
 "#;
 
-pub struct Engine<G: Game>{
+pub struct Engine<G: Game + Send>{
     game: G,
     window: Window,
+    console: Console<SystemTerminal>,
 }
 
-impl<G: Game> Engine<G>{
+impl<G: Game + Send> Engine<G>{
     #[allow(non_snake_case)]
     pub fn Go(){
         println!("--------------------------------------------------------------------------");
@@ -31,19 +37,23 @@ impl<G: Game> Engine<G>{
 
         Logger::init().unwrap();
         Registry::read_from_file();
+        let console = Console::new(SystemTerminal::new());
         Engine{
             game: G::new(),
-            window: Window::from_settings(),
+            window: Window::from_registry(),
+            console:  console,
         }.game_loop();
         println!("---------------------------- Engine Quit! --------------------------------");
     }
 
     fn game_loop(&mut self){
-        loop{
-            self.window.update();
-            if !Registry::running(){
-                break;
-            }
+        while Registry::running(){
+            let window = &mut self.window;
+            let console = &mut self.console;
+            task::join(
+                || window.update()
+                ,||console.update()
+                );
         }
     }
 }
