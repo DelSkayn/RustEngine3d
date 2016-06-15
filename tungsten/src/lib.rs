@@ -21,9 +21,8 @@ mod io;
 mod window;
 mod util;
 mod console;
-mod logic;
 
-
+pub mod logic;
 pub use engine::Engine;
 pub use registry::Registry;
 

@@ -3,6 +3,9 @@ use std::mem;
 
 use super::ComponentStorage;
 use super::Component;
+use super::super::Index;
+
+use std::marker::PhantomData;
 
 struct BitMap(Vec<u8>);
 
@@ -132,5 +135,68 @@ impl<T: Component> ComponentStorage for VecStorage<T> {
             self.components.set_len(len - rem);
         }
         self.components.shrink_to_fit();
+    }
+}
+
+struct Iter<'a,T: Sized + 'a>{
+    borrow: &'a VecStorage<T>,
+    index: Index,
+}
+
+struct IterMut<'a,T: Sized + 'a>{
+    borrow: *mut VecStorage<T>,
+    index: Index,
+    _marker: PhantomData<&'a VecStorage<T>>,
+}
+
+impl<'a,T: Sized> Iterator for Iter<'a,T>{
+    type Item = &'a T;
+    
+    fn next<'b>(&'b mut self) -> Option<Self::Item>{
+        while self.index != (self.borrow.components.len()-1) as Index{
+            self.index+=1;
+            if self.borrow.unused.get(self.index as usize){
+                return Some(&self.borrow.components[self.index as usize]);
+            }
+        }
+        None
+    }
+}
+
+impl<'a,T: Sized + 'a> Iterator for IterMut<'a,T>{
+    type Item = &'a mut T;
+    
+    fn next(&mut self) -> Option<&'a mut T>{
+        unsafe{
+            while self.index != (self.borrow.as_ref().unwrap().components.len()-1) as Index{
+                self.index+=1;
+                if self.borrow.as_ref().unwrap().unused.get(self.index as usize){
+                    let index = self.index as usize;
+                    return Some(&mut self.borrow.as_mut().unwrap().components[index]);
+                }
+            }
+            None
+        }
+    }
+}
+
+
+impl<T: Sized> VecStorage<T>{
+
+    /// Returns a iterable object.
+    fn iter<'a>(&'a self) -> Iter<'a,T>{
+        Iter{
+            borrow: self,
+            index: 0,
+        }
+    }
+
+    /// Returns a iterable object returning mutable references.
+    fn iter_mut<'a>(&'a mut self) -> IterMut<'a,T>{
+        IterMut{
+            borrow: self,
+            index: 0,
+            _marker: PhantomData,
+        }
     }
 }

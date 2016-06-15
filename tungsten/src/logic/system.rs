@@ -1,11 +1,6 @@
 use std::any::TypeId;
 
-enum SystemError{
-    Again,
-}
-
 pub struct RunArgs{
-    fn get<T>(self) -> Option<&mut T>
 }
 
 enum SystemError{
@@ -13,12 +8,12 @@ enum SystemError{
 }
 
 trait System{
-    fn execute(&mut self,comp: RunArgs) -> Result<(),SystemError>;
+    fn execute(&mut self,comp: RunArgs) -> bool;
 }
 
 impl<T> UpdateSystem for FnMut(&T){
-    
 }
+
 
 struct Systems{
     tick: Vec<System>,

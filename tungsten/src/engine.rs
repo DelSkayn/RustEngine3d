@@ -21,6 +21,7 @@ const BANNER: &'static str = r#"
                                \_/__/                                   
 "#;
 
+/// The engine object holds all the data neccesary for the engine.
 pub struct Engine<G: Game + Send> {
     game: G,
     window: Window,
@@ -28,6 +29,8 @@ pub struct Engine<G: Game + Send> {
 }
 
 impl<G: Game + Send> Engine<G> {
+
+    /// Run the engine.
     #[allow(non_snake_case)]
     pub fn Go() {
         println!("--------------------------------------------------------------------------");
