@@ -1,6 +1,7 @@
 
 mod component;
 mod entities;
+mod system;
 
 pub use self::component::{Component, ComponentStorage,VecStorage};
 use self::component::Components;

@@ -2,7 +2,11 @@ mod vec_storage;
 pub use self::vec_storage::VecStorage;
 
 mod components;
-pub use self::components::Components;
+pub use super::component::components::{
+    Components,
+    ComponentStorageBorrowReadGuard,
+    ComponentStorageBorrowWriteGuard,
+};
 
 use std::any::Any;
 
