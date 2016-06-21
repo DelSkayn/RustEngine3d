@@ -192,8 +192,8 @@ impl Components {
 
     /// Borrow component storage if it has not been mutable borrowed already.
     /// returns `None` if it could not borrow the component.
-    pub fn borrow<'a,T: Component>(&'a self) -> Option<ComponentStorageBorrowReadGuard<'a,T::Storage>>{
-        let id = TypeId::of::<T>();
+    pub fn borrow<'a,T: ComponentStorage>(&'a self) -> Option<ComponentStorageBorrowReadGuard<'a,T>>{
+        let id = TypeId::of::<T::Comp>();
         let borrow = self.components
             .get(&id)
             .expect("Added component before it was registered!");
@@ -201,7 +201,7 @@ impl Components {
         if let Some(x) = borrow.borrow_marker.borrow(){
             //downcast
             let bow: &ComponentStorageType = &(*borrow.storage);
-            let r_down: &T::Storage = unsafe{
+            let r_down: &T = unsafe{
                 let to: TraitObject = mem::transmute(bow);
                 mem::transmute(to.data)
             };
@@ -218,8 +218,8 @@ impl Components {
 
     /// Borrow component storage if it has not been borrowed already.
     /// returns `None` if it could not borrow the component.
-    pub fn borrow_mut<'a,T: Component>(&'a self) -> Option<ComponentStorageBorrowWriteGuard<'a,T::Storage>>{
-        let id = TypeId::of::<T>();
+    pub fn borrow_mut<'a,T: ComponentStorage>(&'a self) -> Option<ComponentStorageBorrowWriteGuard<'a,T>>{
+        let id = TypeId::of::<T::Comp>();
         // TODO find a way to not transmute a const to a mut
         let borrow = self.components
             .get(&id)
@@ -228,7 +228,7 @@ impl Components {
         if let Some(x) = borrow.borrow_marker.borrow_mut(){
             //downcast
             let bow: &ComponentStorageType = &(*borrow.storage);
-            let r_down: &mut T::Storage = unsafe{
+            let r_down: &mut T = unsafe{
                 let to: TraitObject = mem::transmute(bow);
                 mem::transmute(to.data)
             };

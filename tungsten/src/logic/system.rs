@@ -1,7 +1,7 @@
 
-use super::Component;
 use super::component::{
     Components,
+    ComponentStorage,
     ComponentStorageBorrowReadGuard,
     ComponentStorageBorrowWriteGuard,
 };
@@ -23,11 +23,11 @@ pub struct Args<'a>{
 }
 
 impl<'a> Args<'a>{
-    fn borrow<T: Component>(&'a self) -> Option<ArgReadGaurd<'a,T::Storage>>{
+    pub fn borrow<T: ComponentStorage>(&'a self) -> Option<ArgReadGaurd<'a,T>>{
         self.components.borrow::<T>()
     }
 
-    fn borrow_mut<T: Component>(&self) -> Option<ArgWriteGaurd<'a,T::Storage>>{
+    pub fn borrow_mut<T: ComponentStorage>(&self) -> Option<ArgWriteGaurd<'a,T>>{
         self.components.borrow_mut::<T>()
     }
 }
@@ -92,11 +92,6 @@ impl System for SinkSystem{
     }
 }
 
-
-
-#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct SystemId(usize);
-
 pub trait IntoSystemData{
     fn into_system_data(self) -> SystemData;
 }
@@ -142,7 +137,7 @@ impl SystemBuilder{
     }
 }
 
-struct Systems{
+pub struct Systems{
     systems: Vec<SystemData>,
 }
 
@@ -186,4 +181,3 @@ fn schedule<'a>(systems: &[SystemData],arg: Args<'a>){
 
     }
 }
-
