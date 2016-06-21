@@ -1,4 +1,3 @@
-use task;
 
 use super::Component;
 use super::component::{
@@ -7,14 +6,18 @@ use super::component::{
     ComponentStorageBorrowWriteGuard,
 };
 
-use std::cell::UnsafeCell;
+use task;
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use std::cell::{Cell,UnsafeCell};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize,Ordering};
 
 pub type ArgReadGaurd<'a,T> = ComponentStorageBorrowReadGuard<'a,T>;
 pub type ArgWriteGaurd<'a,T> = ComponentStorageBorrowWriteGuard<'a,T>;
 
 /// Struct for handeling system data needs.
+#[derive(Clone)]
 pub struct Args<'a>{
     components: &'a Components,
 }
@@ -29,132 +32,158 @@ impl<'a> Args<'a>{
     }
 }
 
-pub trait System: 'static{
+pub trait System: Sync + 'static {
     /// Executes an system returns wether the system was properly
     /// executed or needs to be executed again.
     /// If system was not properly executed the state of the world was not changed,
     fn execute<'a>(&'a mut self,arg: Args<'a>) -> bool;
 }
 
-#[derive(Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
-pub struct SystemId(u64);
+pub struct SinkSystemInner{
+    system: UnsafeCell<Box<System>>,
+    count: Cell<usize>,
+    dep_count: AtomicUsize,
+}
 
-#[derive(Clone)]
-pub struct DepCount(Arc<AtomicUsize>);
+unsafe impl Sync for SinkSystemInner{}
+unsafe impl Send for SinkSystemInner{}
 
-impl DepCount{
-    fn new() -> Self{
-        DepCount(Arc::new(AtomicUsize::new(0)))
+pub struct SinkSystem(Arc<SinkSystemInner>);
+
+impl SinkSystem{
+    fn new<S: System>(s: S) -> Self{
+        SinkSystem(Arc::new(
+                SinkSystemInner{
+                    system: UnsafeCell::new(Box::new(s)),
+                    count: Cell::new(1),
+                    dep_count: AtomicUsize::new(1),
+                }
+                ))
     }
+}
 
-    fn done(&self) -> bool{
-        self.0.load(Ordering::Acquire) == 0
+impl Clone for SinkSystem{
+    fn clone(&self) -> Self{
+        let cur = self.0.count.get();
+        self.0.count.set(cur + 1);
+        self.0.dep_count.store(self.0.count.get(),Ordering::Release);
+        SinkSystem(self.0.clone())
     }
+}
 
-    fn finish(&self){
-        self.0.fetch_sub(1,Ordering::AcqRel);
+impl System for SinkSystem{
+    fn execute<'a>(&'a mut self,arg: Args<'a>) -> bool{
+        if self.0.dep_count.load(Ordering::Acquire) == 0{
+            let res = unsafe{ (*self.0.system.get()).execute(arg) };
+            if res {
+                self.0.dep_count.store(self.0.count.get(),Ordering::Release);
+            }
+            res
+        }else if self.0.dep_count.fetch_sub(1,Ordering::AcqRel) == 1{
+            // each parent has completed and executed there childs.
+            let res = unsafe{ (*self.0.system.get()).execute(arg) };
+            if res {
+                self.0.dep_count.store(self.0.count.get(),Ordering::Release);
+            }
+            res
+        }else{
+            true
+        }
     }
+}
 
-    fn set(&mut self,count: usize){
-        self.0.store(count,Ordering::Release);
+
+
+#[derive(Debug,Copy,Clone,Eq,PartialEq,Ord,PartialOrd)]
+pub struct SystemId(usize);
+
+pub trait IntoSystemData{
+    fn into_system_data(self) -> SystemData;
+}
+
+impl<S: System> IntoSystemData for S{
+    fn into_system_data(self) -> SystemData{
+        SystemData{
+            system: UnsafeCell::new(Box::new(self)),
+            childs: None,
+        }
+    }
+}
+
+impl IntoSystemData for SystemBuilder{
+    fn into_system_data(self) -> SystemData{
+        self.0
     }
 }
 
 pub struct SystemData{
     system: UnsafeCell<Box<System>>,
-    from: Vec<DepCount>,
-    deps: Option<DepCount>,
-    deps_amount: usize,
-    id: SystemId,
+    childs: Option<Vec<SystemData>>,
 }
 
-impl SystemData{
-    fn new(id: SystemId,system: Box<System>) -> Self{
-        SystemData{
-            system: UnsafeCell::new(system),
-            from: Vec::new(),
-            deps: None,
-            deps_amount: 0,
-            id: id
+unsafe impl Sync for SystemData{}
+
+pub struct SystemBuilder(SystemData);
+
+impl SystemBuilder{
+    pub fn new<S: System>(system: S) -> Self{
+        SystemBuilder(
+            SystemData{
+                system: UnsafeCell::new(Box::new(system)),
+                childs: None,
+            })
+    }
+
+    pub fn child<S: IntoSystemData>(&mut self,s: S){
+        if let None = self.0.childs{
+            self.0.childs = Some(Vec::new());
         }
-    }
-
-    fn ready(&self) -> bool{
-        if let Some(ref d) = self.deps{
-            d.done()
-        }else{
-            true
-        }
-    }
-
-    unsafe fn execute<'a>(&'a self,arg: Args<'a>) -> bool{
-        (*self.system.get()).execute(arg)
-    }
-
-    fn reset(&mut self){
-        if let Some(ref mut deps) = self.deps{
-            deps.set(self.deps_amount);
-        }
-    }
-
-    fn add_dependency_to(&mut self) -> DepCount{
-        if self.deps.is_none(){
-            self.deps = Some(DepCount::new());
-        }
-        self.deps_amount += 1;
-        self.deps.as_mut().unwrap().set(self.deps_amount);
-        self.deps.as_ref().unwrap().clone()
-    }
-
-    fn add_dependency_from(&mut self,dc: DepCount){
-        self.from.push(dc);
+        self.0.childs.as_mut().unwrap().push(s.into_system_data());
     }
 }
 
-pub struct Systems{
+struct Systems{
     systems: Vec<SystemData>,
-    next: u64,
-    sorted: bool,
-}
-
-#[derive(Debug)]
-enum Error{
-    IdNotFound(SystemId)
 }
 
 impl Systems{
     pub fn new() -> Self{
         Systems{
             systems: Vec::new(),
-            next: 0,
-            sorted: true,
         }
     }
 
-    pub fn add<T: System>(&mut self,sys: T) -> SystemId{
-        self.sorted = false;
-        let res = self.next;
-        self.next += 1;
-        self.systems.push(SystemData::new(SystemId(res),Box::new(sys)));
-        SystemId(res)
+    pub fn add<S: IntoSystemData>(&mut self,system: S){
+        self.systems.push(system.into_system_data());
     }
 
-    /// Create a dependency of one system on an other.
-    /// where from repesents the system which needs to be executed before the to.
-    pub fn dependency(&mut self,to: SystemId,from: SystemId) -> Result<(),Error>{
-        if !self.sorted{
-            self.systems.sort_by(|ref a,ref b| a.id.cmp(&b.id));
-        }
-        let to_index = try!(self.systems.binairy_search_by(|ref a| a.id.cmp(&to))
-            .map_err(|_| Error::IdNotFound(to)));
-        let from_index = try!(self.systems.binairy_search_by(|ref a| a.id.cmp(&from))
-            .map_err(|_| Error::IdNotFound(from))); 
-        let dep = self.systems[to_index].add_dependency_to();
-        self.systems[from_index].add_dependency_from(dep);
-    }
-
-    pub fn execute(&mut self,componets: &Components){
-        
-        unimplemented!();
+    pub fn execute(&mut self,components: &Components){
+        schedule(&self.systems,Args{
+            components: components
+        });
     }
 }
+
+fn schedule<'a>(systems: &[SystemData],arg: Args<'a>){
+    if systems.len() == 1{
+        unsafe{
+            while !(*systems[0].system.get()).execute(arg.clone()){}
+        }
+        if let Some(x) = systems[0].childs.as_ref(){
+            schedule(x,arg);
+        }
+
+    }else{
+        let mid = systems.len() / 2;
+        let (fir,sec) = systems.split_at(mid);
+        let arg_c = arg.clone();
+        task::join(||{
+            schedule(fir,arg_c);
+        }
+        ,||{
+            schedule(sec,arg);
+        });
+
+    }
+}
+

@@ -13,13 +13,13 @@ use std::any::Any;
 /// Component trait 
 /// All components must implement this type in order 
 /// to be used by an entity
-pub trait Component: Sized + Any {
+pub trait Component: Sized + Any + Sync{
     /// The storage type this component will be stored in.
     type Storage: ComponentStorage<Comp = Self>;
 }
 
 /// A trait defining component storage type.
-pub trait ComponentStorage: Any {
+pub trait ComponentStorage: Any + Sync{
     type Comp: Component;
 
     /// Create a new type.
@@ -46,7 +46,7 @@ pub trait ComponentStorage: Any {
 
 // for remove entities without knowing the type.
 // Basicly a translation to a virtual type.
-trait ComponentStorageType: Any {
+trait ComponentStorageType: Any + Sync{
     fn remove(&mut self, entity: usize);
 
     fn resize(&mut self);
