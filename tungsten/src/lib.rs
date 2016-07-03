@@ -2,6 +2,7 @@
 #![crate_type = "lib"]
 #![allow(dead_code)]
 
+
 // extern crate serde;
 // extern crate serde_json;
 //
@@ -21,6 +22,7 @@ mod io;
 mod window;
 mod util;
 mod console;
+mod render;
 
 pub mod logic;
 pub use engine::Engine;

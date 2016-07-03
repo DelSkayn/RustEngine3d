@@ -2,6 +2,7 @@
 mod component;
 mod entities;
 mod system;
+mod get_once;
 
 pub use self::system::{Schedular,Args};
 pub use self::component::{Component, ComponentStorage,VecStorage};

@@ -6,8 +6,8 @@ use task;
 
 use window::Window;
 use util::Logger;
-
 use console::{Console, SystemTerminal};
+use render::Render;
 
 const BANNER: &'static str = r#"
  ______                                        __                       
@@ -26,6 +26,7 @@ pub struct Engine<G: Game + Send> {
     game: G,
     window: Window,
     console: Console<SystemTerminal>,
+    render: Render,
 }
 
 impl<G: Game + Send> Engine<G> {
@@ -45,6 +46,7 @@ impl<G: Game + Send> Engine<G> {
                 game: G::new(),
                 window: Window::from_registry(),
                 console: console,
+                render: Render::new(),
             }
             .game_loop();
         println!("---------------------------- Engine Quit! --------------------------------");

@@ -10,6 +10,7 @@ time = "*"
 crossbeam = "*"
 lazy_static = "*"
 toml = "*"
+vulkano = "*"
 
 [dependencies.task]
 path = "../../task-rs"

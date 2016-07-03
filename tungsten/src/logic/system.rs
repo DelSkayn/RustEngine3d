@@ -5,11 +5,11 @@ use super::component::{
     ComponentStorageBorrowReadGuard,
     ComponentStorageBorrowWriteGuard,
 };
+use super::get_once::GetOnce;
 
 use task::{self,DynTaskImpl,ArcLatch,Latch};
 
 use std::mem;
-use std::cell::UnsafeCell;
 use std::marker::PhantomData;
 
 pub type ArgReadGaurd<'a,T> = ComponentStorageBorrowReadGuard<'a,T>;
@@ -97,20 +97,128 @@ impl<'a> Schedular<'a>{
         res
     }
 
-    fn w1r0run<A,F>(&mut self,func: F) 
-        where F: FnOnce(&mut A) + Send + 'a,
+    pub fn w0r1run<A,F>(&mut self,func: F) 
+        where F: FnOnce(&A) + Send + 'a,
               A: ComponentStorage 
     {
-        let func_opt = UnsafeCell::new(Some(func));
+        let func = GetOnce::new(func);
         self.execute(move |args|{
-            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
-            // TODO: Find a better way.
-            unsafe{
-                (*func_opt.get()).take().unwrap()(&mut *a);
-            }
+            let a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
+            func.get()(&a);
             true
         });
     }
 
+    pub fn w0r2run<A,B,F>(&mut self,func: F) 
+        where F: FnOnce(&A,&B) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let a = if let Some(x) = args.borrow::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            func.get()(&a,&b);
+            true
+        });
+    }
+
+    pub fn w0r3run<A,B,C,F>(&mut self,func: F) 
+        where F: FnOnce(&A,&B,&C) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+              C: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let a = if let Some(x) = args.borrow::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            let c = if let Some(x) = args.borrow::<C>(){ x }else{return true;};
+            func.get()(&a,&b,&c);
+            true
+        });
+    }
+
+    pub fn w0r4run<A,B,C,D,F>(&mut self,func: F) 
+        where F: FnOnce(&A,&B,&C,&D) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+              C: ComponentStorage,
+              D: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let a = if let Some(x) = args.borrow::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            let c = if let Some(x) = args.borrow::<C>(){ x }else{return true;};
+            let d = if let Some(x) = args.borrow::<D>(){ x }else{return true;};
+            func.get()(&a,&b,&c,&d);
+            true
+        });
+    }
+
+    pub fn w1r0run<A,F>(&mut self,func: F) 
+        where F: FnOnce(&mut A) + Send + 'a,
+              A: ComponentStorage 
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
+            // TODO: Find a better way.
+            func.get()(&mut a);
+            true
+        });
+    }
+
+    pub fn w1r1run<A,B,F>(&mut self,func: F) 
+        where F: FnOnce(&mut A,&B) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            // TODO: Find a better way.
+            func.get()(&mut a,&b);
+            true
+        });
+    }
+
+    pub fn w1r2run<A,B,C,F>(&mut self,func: F) 
+        where F: FnOnce(&mut A,&B,&C) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+              C: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            let c = if let Some(x) = args.borrow::<C>(){ x }else{return true;};
+            // TODO: Find a better way.
+            func.get()(&mut a,&b,&c);
+            true
+        });
+    }
+
+    pub fn w1r3run<A,B,C,D,F>(&mut self,func: F) 
+        where F: FnOnce(&mut A,&B,&C,&D) + Send + 'a,
+              A: ComponentStorage,
+              B: ComponentStorage,
+              C: ComponentStorage,
+              D: ComponentStorage,
+    {
+        let func = GetOnce::new(func);
+        self.execute(move |args|{
+            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return true;};
+            let b = if let Some(x) = args.borrow::<B>(){ x }else{return true;};
+            let c = if let Some(x) = args.borrow::<C>(){ x }else{return true;};
+            let d = if let Some(x) = args.borrow::<D>(){ x }else{return true;};
+            // TODO: Find a better way.
+            func.get()(&mut a,&b,&c,&d);
+            true
+        });
+    }
 }
 
