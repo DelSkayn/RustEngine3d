@@ -47,7 +47,63 @@ pub enum Error {
     InvalidType,
 }
 
-pub type Result<T> = StdResult<T, Error>;
+pub enum RegResult<T>{
+    Ok(T),
+    Err(Error),
+}
+
+impl<T> RegResult<T>{
+    pub fn new(val: StdResult<T,Error>) -> Self{
+        match val{
+            Ok(x) => RegResult::Ok(x),
+            Err(x) => RegResult::Err(x),
+        }
+    }
+
+    pub fn unwrap(self) -> T{
+        if let RegResult::Ok(x) = self{
+            x
+        }else{
+            panic!();
+        }
+    }
+    
+    pub fn is_ok(&self) -> bool{
+        if let &RegResult::Ok(_) = self{
+            true
+        }else{
+            false
+        }
+    }
+
+    pub fn is_err(&self) -> bool{
+        if let &RegResult::Err(_) = self{
+            true
+        }else{
+            false
+        }
+    }
+
+    pub fn or(self,default: T) -> T{
+        if let RegResult::Ok(x) = self{
+            x
+        }else{
+            default
+        }
+    }
+}
+
+impl <T: Default> RegResult<T>{
+    pub fn or_default(self) -> T{
+        if let RegResult::Ok(x) = self{
+            x
+        }else{
+            Default::default()
+        }
+    }
+}
+
+pub type Result<T> = RegResult<T>;
 
 pub struct Registry(Table);
 
@@ -76,14 +132,20 @@ impl Registry {
         if name.contains('.') {
             let (first, rest) = name.split_at(name.find('.').unwrap());
             let rest = &rest[1..rest.len()];
-            match *try!(table.get(first).ok_or(Error::EntryDoesntExist(name.to_string()))) {
+            let res = table.get(first).ok_or(Error::EntryDoesntExist(name.to_string()));
+            if let Err(x) = res{
+                return RegResult::Err(x);
+            }
+            match *res.unwrap() {
                 Value::Table(ref t) => Self::get_rec(t, rest),
-                _ => Err(Error::EntryDoesntExist(name.to_string())),
+                _ => RegResult::new(Err(Error::EntryDoesntExist(name.to_string()))),
             }
         } else {
-            T::from_value(try!(table.get(name)
-                    .ok_or(Error::EntryDoesntExist(name.to_string()))))
-                .ok_or(Error::InvalidType)
+            let res = table.get(name).ok_or(Error::EntryDoesntExist(name.to_string()));
+            if let Err(x) = res{
+                return RegResult::Err(x);
+            }
+            RegResult::new(T::from_value(res.unwrap()).ok_or(Error::InvalidType))
         }
     }
 

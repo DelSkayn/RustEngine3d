@@ -16,11 +16,13 @@ pub struct Window {
 impl Window {
     pub fn from_registry() -> Self {
         info!("Creating window from settings!");
-        let dimensions: [u64; 2] = Registry::get("window.size").unwrap();
-        let vsync = Registry::get("window.vsync").unwrap();
-        let position: [u64; 2] = Registry::get("window.position").unwrap();
-        let title = Registry::get("window.title").unwrap();
-        let quit_on_esc = Registry::get("general.quit_on_esc").unwrap();
+
+        let dimensions: [u64; 2] = Registry::get("window.size").or([300,300]);
+        let vsync = Registry::get("window.vsync").or(false);
+        let position: [u64; 2] = Registry::get("window.position").or([0,0]);
+        let title = Registry::get("window.title").or("Tungsten engine".to_string());
+        let quit_on_esc = Registry::get("general.quit_on_esc").or(true);
+
         info!("Window size: {}x{}", dimensions[0], dimensions[1]);
         info!("Window position: {}x{}", position[0], position[1]);
         info!("vsync: {}", vsync);
