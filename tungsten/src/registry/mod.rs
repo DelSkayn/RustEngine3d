@@ -27,7 +27,6 @@ use std::result::Result as StdResult;
 
 use std::path::Path;
 use std::path::PathBuf;
-use io::Io;
 
 
 mod register_type;
@@ -188,6 +187,7 @@ impl Registry {
 
     pub fn read_from_file() {
         let path = SETTINGS_FILE.read().unwrap().clone();
+        /*
         let res = Io::read(path.clone()).into_inner().map(|e| String::from_utf8(e).unwrap());
         match res {
             Ok(x) => {
@@ -212,6 +212,7 @@ impl Registry {
                       path.to_str().unwrap());
             }
         }
+        */
     }
 }
 

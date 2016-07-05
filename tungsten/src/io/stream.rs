@@ -1,140 +1,165 @@
 extern crate crossbeam;
 
 use self::crossbeam::sync::MsQueue;
+
+use std::thread::JoinHandle;
+use std::sync::mpsc::{Receiver,Sender,self};
 use std::sync::Arc;
+use std::collections::HashMap;
 
-use std::io::Read;
-use std::io::Write;
-
-use std::path::Path;
 use std::path::PathBuf;
 
-use std::env;
-use std::thread::{self, JoinHandle};
 use std::fs::File;
-use std::io::ErrorKind;
 
-use super::FileWrite;
-use super::FileRead;
-use super::Result;
-use super::Error;
+use std::io::SeekFrom;
+use std::io::Result;
+use std::io::Write;
+use std::io::Read;
+use std::io::Seek;
 
-pub enum IoMessage {
-    Read(FileRead, PathBuf),
-    Create(FileWrite, Vec<u8>, PathBuf),
-    Write(FileWrite, Vec<u8>, PathBuf),
-    Quit,
+use std::thread;
+
+use std::mem;
+
+lazy_static!{ static ref STREAM: Stream = Stream::new(); }
+
+pub struct FileId(usize);
+
+pub enum Command{
+    Read(usize,FileId,Sender<Result<Vec<u8>>>),
+    ReadFully(FileId,Sender<Result<Vec<u8>>>),
+    Write(Vec<u8>,FileId,Sender<Result<()>>),
+    Seek(SeekFrom,FileId,Sender<Result<()>>),
+    Open(PathBuf,Sender<Result<FileId>>),
+    Create(PathBuf,Sender<Result<FileId>>),
+    Close(FileId),
+    Stop,
 }
 
-pub struct IoHandle {
-    handle: Option<JoinHandle<()>>,
-    send: Arc<MsQueue<IoMessage>>,
+pub struct Stream{
+    join: JoinHandle<()>,
+    que: Arc<MsQueue<Command>>,
 }
 
-impl IoHandle {
-    pub fn send(&self, im: IoMessage) {
-        self.send.push(im);
-    }
-}
-
-impl Drop for IoHandle {
-    fn drop(&mut self) {
-        self.send(IoMessage::Quit);
-        self.handle.take().unwrap().join().expect("Io thread quit before join!");
-    }
-}
-
-pub struct IoThread;
-
-impl IoThread {
-    pub fn new() -> IoHandle {
+impl Stream{
+    fn new() -> Self{
         let que = Arc::new(MsQueue::new());
-        let clone_que = que.clone();
-        let handle = thread::spawn(move || thread_loop(clone_que));
-        IoHandle {
-            handle: Some(handle),
-            send: que,
+        let join = thread::spawn(|| run(que.clone()));
+        Stream{
+            que: que,
+            join: join,
         }
+    }
+
+    pub fn que(com: Command){
+        STREAM.que.push(com);
     }
 }
 
-fn thread_loop(que: Arc<MsQueue<IoMessage>>) {
-    info!("Starting io thread.");
-    info!("Execution dir: \"{}\".",
-          env::current_dir()
-              .unwrap()
-              .to_str()
-              .unwrap());
-    loop {
-        match que.pop() {
-            IoMessage::Read(file, path) => {
-                file.0.file.complete(read(&path));
-                file.0.sleep.awake();
-            }
-            IoMessage::Write(file, data, path) => {
-                file.0.file.complete(write(data, &path));
-                file.0.sleep.awake();
-            }
-            IoMessage::Create(file, data, path) => {
-                file.0.file.complete(create(data, &path));
-                file.0.sleep.awake();
-            }
-            IoMessage::Quit => {
-                debug!("Io thread quiting!");
-                break;
+fn run(que: Arc<MsQueue<Command>>){
+    let mut open_files = HashMap::new();
+    // TODO impl for wrapping integer.
+    let mut next = 0usize;
+    loop{
+        match que.pop(){
+            Command::Open(path,sender) => {
+                let file = File::open(path);
+                match file{
+                    Ok(x) => {
+                        let id = next;
+                        next +=1;
+                        open_files.insert(id,x);
+                        sender.send(Ok(FileId(id)));
+                    },
+                    Err(e) => {
+                        sender.send(Err(e));
+                    }
+                }
+            },
+            Command::Create(path,sender) => {
+                let file = File::create(path);
+                match file{
+                    Ok(x) => {
+                        let id = next;
+                        next +=1;
+                        open_files.insert(id,x);
+                        sender.send(Ok(FileId(id)));
+                    },
+                    Err(e) => {
+                        sender.send(Err(e));
+                    }
+                }
+            },
+            Command::Read(size,file_id,sender) => {
+                let FileId(id) = file_id;
+                let mut buf = Vec::with_capacity(size);
+                for _ in 0..size{
+                    buf.push(0);
+                }
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before reading.")
+                    .read_to_end(&mut buf);
+                match res{
+                    Ok(_) => {
+                        sender.send(Ok(buf));
+                    },
+                    Err(x) => {
+                        sender.send(Err(x));
+                    }
+                }
+            },
+            Command::ReadFully(file_id,sender) => {
+                let FileId(id) = file_id;
+                let mut buf = Vec::new();
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before reading.")
+                    .read(&mut buf);
+                match res{
+                    Ok(_) => {
+                        sender.send(Ok(buf));
+                    },
+                    Err(x) => {
+                        sender.send(Err(x));
+                    }
+                }
+            },
+            Command::Write(buf,file_id,sender) => {
+                let FileId(id) = file_id;
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before writing.")
+                    .write(&buf);
+                match res{
+                    Ok(_) => {
+                        sender.send(Ok(()));
+                    },
+                    Err(x) => {
+                        sender.send(Err(x));
+                    }
+                }
+            },
+            Command::Seek(seek,file_id,sender) => {
+                let FileId(id) = file_id;
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before writing.")
+                    .seek(seek);
+                match res{
+                    Ok(_) => {
+                        sender.send(Ok(()));
+                    },
+                    Err(x) => {
+                        sender.send(Err(x));
+                    }
+                }
+            },
+            Command::Close(file_id) => {
+                let FileId(id) = file_id;
+                if let None = open_files.remove(&id){
+                    warn!("Tried to close file which was not opened.");
+                }
+            },
+            Command::Stop => {
+                return;
             }
         }
     }
-}
-
-fn read(path: &Path) -> Result<Vec<u8>> {
-    let mut file = try!(File::open(path).map_err(|e| {
-        match e.kind() {
-            ErrorKind::NotFound => Error::NotFound,
-            _ => Error::Other,
-        }
-    }));
-    let meta = try!(file.metadata().map_err(|_| Error::Other));
-    if meta.is_dir() {
-        return Err(Error::NotAFile);
-    }
-    let mut buf = Vec::with_capacity(meta.len() as usize);
-    try!(file.read_to_end(&mut buf).map_err(|_| Error::Other));
-    Ok(buf)
-}
-
-fn write(buff: Vec<u8>, path: &Path) -> Result<()> {
-    let mut file = try!(File::open(path).map_err(|e| {
-        match e.kind() {
-            ErrorKind::NotFound => Error::NotFound,
-            _ => Error::Other,
-        }
-    }));
-    let meta = try!(file.metadata().map_err(|_| Error::Other));
-    if meta.is_dir() {
-        return Err(Error::NotAFile);
-    }
-    try!(file.write_all(&buff).map_err(|_| Error::Other));
-    Ok(())
-}
-
-fn create(buff: Vec<u8>, path: &Path) -> Result<()> {
-    let mut file = try!(File::create(path).map_err(|e| {
-        match e.kind() {
-            ErrorKind::NotFound => Error::NotFound,
-            _ => Error::Other,
-        }
-    }));
-    let meta = try!(file.metadata().map_err(|_| {
-        println!("2");
-        Error::Other
-    }));
-    if meta.is_dir() {
-        return Err(Error::NotAFile);
-    }
-    try!(file.write_all(&buff).map_err(|_| {
-        println!("3");
-        Error::Other
-    }));
-    Ok(())
 }

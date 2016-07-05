@@ -8,227 +8,113 @@
 //!  * Do some api cleaning. the current implementation is very rough.
 //!
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::cell::UnsafeCell;
+mod stream;
+
+use std::sync::mpsc::{Sender,Receiver,self};
+
+use self::stream::{FileId,Stream,Command};
 
 use std::path::Path;
-use std::ffi::OsStr;
 
-use std::thread::{self, Thread};
+use std::io::Result;
 
-use std::convert::Into;
-
-mod stream;
-use self::stream::IoThread;
-use self::stream::IoHandle;
-use self::stream::IoMessage;
-
-lazy_static!{
-    static ref IO: Io = Io::new();
+enum FileState{
+    Ready(FileId),
+    Wait(Receiver<Result<FileId>>),
 }
 
-use std::result::Result as StdResult;
-
-#[derive(Debug)]
-pub enum Error {
-    NotFound,
-    AlreadExists,
-    NotAFile,
-    Other,
-}
-
-pub type Result<T> = StdResult<T, Error>;
-
-
-struct ReadData {
-    file: UnsafeCell<Option<Result<Vec<u8>>>>,
-    complete: AtomicBool,
-}
-
-struct SleepData {
-    thread: UnsafeCell<Option<Thread>>,
-    block: AtomicBool,
-}
-
-struct WriteData {
-    complete: AtomicBool,
-    file: UnsafeCell<Option<Result<()>>>,
-}
-
-unsafe impl Send for ReadData {}
-unsafe impl Sync for ReadData {}
-
-unsafe impl Send for SleepData {}
-unsafe impl Sync for SleepData {}
-
-unsafe impl Send for WriteData {}
-unsafe impl Sync for WriteData {}
-
-impl ReadData {
-    fn new() -> Self {
-        ReadData {
-            file: UnsafeCell::new(None),
-            complete: AtomicBool::new(false),
+impl FileState{
+    fn get_id(&mut self) -> FileId{
+        match self{
+            &mut FileState::Ready(x) => x,
+            &mut FileState::Wait(recv) => {
+                let id = recv.recv().unwrap().unwrap();
+                *self = FileState::Ready(id);
+                id
+            },
         }
     }
 
-    fn done(&self) -> bool {
-        self.complete.load(Ordering::Acquire)
-    }
-
-    fn complete(&self, res: Result<Vec<u8>>) {
-        unsafe{ (*self.file.get()) = Some(res) };
-        self.complete.store(true, Ordering::Release);
-    }
-
-    fn as_inner(&self) -> Result<Vec<u8>> {
-        if !self.done() {
-            panic!("Tried to unwrap file before it was loaded");
-        }
-        unsafe { (*self.file.get()).take().unwrap() }
-    }
-}
-
-impl WriteData {
-    fn new() -> Self {
-        WriteData {
-            file: UnsafeCell::new(None),
-            complete: AtomicBool::new(false),
-        }
-    }
-
-    fn done(&self) -> bool {
-        self.complete.load(Ordering::Acquire)
-    }
-
-    fn complete(&self, res: Result<()>) {
-        unsafe { (*self.file.get()) = Some(res) };
-        self.complete.store(true, Ordering::Release);
-    }
-
-    fn as_inner(&self) -> Result<()> {
-        if !self.done() {
-            panic!("Tried to unwrap file before it was loaded");
-        }
-        unsafe { (*self.file.get()).take().unwrap() }
-    }
-}
-
-impl SleepData {
-    fn new() -> Self {
-        SleepData {
-            thread: UnsafeCell::new(None),
-            block: AtomicBool::new(false),
-        }
-    }
-
-    fn sleep(&self) {
-        self.block.store(true, Ordering::Release);
-        unsafe { (*self.thread.get()) = Some(thread::current()) };
-        thread::park();
-        self.block.store(false, Ordering::Release);
-    }
-
-    fn awake(&self) {
-        while self.block.load(Ordering::Acquire) {
-            unsafe {
-                if let Some(thread) = (*self.thread.get()).take() {
-                    thread.unpark();
-                }
-            }
+    fn wait(&mut self) -> Result<()>{
+        match self{
+            FileState::Wait(recv) => {
+                let id = try!(recv.recv().unwrap());
+                *self = FileState::Ready(id);
+            },
+            _ => Ok(()),
         }
     }
 }
 
-pub struct FileWriteInner {
-    sleep: SleepData,
-    file: WriteData,
-}
+struct WriteResult(Receiver<Result<()>>);
 
-impl FileWriteInner {
-    fn new() -> Self {
-        FileWriteInner {
-            sleep: SleepData::new(),
-            file: WriteData::new(),
-        }
+impl WriteResult{
+    fn wait(&mut self) -> Result<()>{
+        self.0.recv().unwrap()
     }
 }
 
-impl FileReadInner {
-    fn new() -> Self {
-        FileReadInner {
-            sleep: SleepData::new(),
-            file: ReadData::new(),
-        }
+impl Drop for WriteResult{
+    fn drop(&mut self){
+        self.0.recv().unwrap().expect("File write returned an error.");
     }
 }
 
-pub struct FileReadInner {
-    sleep: SleepData,
-    file: ReadData,
-}
+struct ReadResult(Receiver<Result<Vec<u8>>>);
 
-pub struct FileWrite(Arc<FileWriteInner>);
-
-pub struct FileRead(Arc<FileReadInner>);
-
-impl FileWrite {
-    pub fn is_done(&self) -> bool {
-        self.0.file.done()
-    }
-
-    pub fn into_inner(self) -> Result<()> {
-        if !self.0.file.done() {
-            self.0.sleep.sleep();
-        }
-        self.0.file.as_inner()
+impl ReadResult{
+    fn wait(&mut self) -> Result<Vec<u8>>{
+        self.0.recv().unwrap()
     }
 }
 
-impl FileRead {
-    pub fn is_done(&self) -> bool {
-        self.0.file.done()
-    }
-
-    pub fn into_inner(self) -> Result<Vec<u8>> {
-        if !self.0.file.done() {
-            self.0.sleep.sleep();
-        }
-        self.0.file.as_inner()
+impl Drop for ReadResult{
+    fn drop(&mut self){
+        self.0.recv().unwrap().expect("File write returned an error.");
     }
 }
 
-pub struct Io {
-    join: IoHandle,
-}
+struct File(FileState);
 
-impl Io {
-    fn new() -> Self {
-        Io { join: IoThread::new() }
+impl File{
+    fn open<P: AsRef<Path>>(path: P) -> Self{
+        let (send,recv) = mpsc::channel();
+        Stream::que(Command::Open(path.to_path_buf(),send));
+        File(FileState::Wait(recv))
+    }
+
+    fn create<P: AsRef<Path>>(path: P) -> Self{
+        let (send,recv) = mpsc::channel();
+        Stream::que(Command::Create(path.to_path_buf(),send));
+        File(FileState::Wait(recv))
+    }
+
+    fn ready(&mut self) -> Result<()>{
+        self.0.wait()
+    }
+
+    fn write(&mut self,data: &[u8]) -> WriteResult{
+        let (send,recv) = mpsc::channel();
+        let id = self.0.get_id();
+        let buf = Vec::with_capacity(data.len());
+        buf.extend_from_slice(data);
+        Stream::que(Command::Write(data,id,send));
+        WriteResult(recv)
+    }
+
+    fn read(&mut self,amount: usize) -> ReadResult{
+        let (send,recv) = mpsc::channel();
+        let id = self.0.get_id();
+        Stream::que(Command::Read(amount,id,send));
+        ReadResult(recv)
+    }
+
+    fn read_to_end(&mut self) -> ReadResult{
+        let (send,recv) = mpsc::channel();
+        let id = self.0.get_id();
+        Stream::que(Command::ReadFully(id,send));
+        ReadResult(recv)
     }
 }
 
-impl Io {
-    pub fn read<S: AsRef<OsStr>>(path: S) -> FileRead {
-        let path = Path::new(path.as_ref()).to_path_buf();
-        let file = Arc::new(FileReadInner::new());
-        IO.join.send(IoMessage::Read(FileRead(file.clone()), path));
-        FileRead(file)
-    }
 
-    pub fn write<S: AsRef<OsStr>, B: Into<Vec<u8>>>(path: S, vec: B) -> FileWrite {
-        let path = Path::new(path.as_ref()).to_path_buf();
-        let file = Arc::new(FileWriteInner::new());
-        IO.join.send(IoMessage::Write(FileWrite(file.clone()), vec.into(), path));
-        FileWrite(file)
-    }
-
-    pub fn create<S: AsRef<OsStr>, B: Into<Vec<u8>>>(path: S, vec: B) -> FileWrite {
-        let path = Path::new(path.as_ref()).to_path_buf();
-        let file = Arc::new(FileWriteInner::new());
-        IO.join.send(IoMessage::Create(FileWrite(file.clone()), vec.into(), path));
-        FileWrite(file)
-    }
-}
