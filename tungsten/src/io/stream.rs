@@ -3,7 +3,7 @@ extern crate crossbeam;
 use self::crossbeam::sync::MsQueue;
 
 use std::thread::JoinHandle;
-use std::sync::mpsc::{Receiver,Sender,self};
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::collections::HashMap;
 
@@ -19,10 +19,9 @@ use std::io::Seek;
 
 use std::thread;
 
-use std::mem;
-
 lazy_static!{ static ref STREAM: Stream = Stream::new(); }
 
+#[derive(Eq,PartialEq,Clone,Copy)]
 pub struct FileId(usize);
 
 pub enum Command{
@@ -44,7 +43,8 @@ pub struct Stream{
 impl Stream{
     fn new() -> Self{
         let que = Arc::new(MsQueue::new());
-        let join = thread::spawn(|| run(que.clone()));
+        let c_que = que.clone();
+        let join = thread::spawn(|| run(c_que));
         Stream{
             que: que,
             join: join,
@@ -69,10 +69,10 @@ fn run(que: Arc<MsQueue<Command>>){
                         let id = next;
                         next +=1;
                         open_files.insert(id,x);
-                        sender.send(Ok(FileId(id)));
+                        sender.send(Ok(FileId(id))).unwrap();
                     },
                     Err(e) => {
-                        sender.send(Err(e));
+                        sender.send(Err(e)).unwrap();
                     }
                 }
             },
@@ -83,10 +83,10 @@ fn run(que: Arc<MsQueue<Command>>){
                         let id = next;
                         next +=1;
                         open_files.insert(id,x);
-                        sender.send(Ok(FileId(id)));
+                        sender.send(Ok(FileId(id))).unwrap();
                     },
                     Err(e) => {
-                        sender.send(Err(e));
+                        sender.send(Err(e)).unwrap();
                     }
                 }
             },
@@ -101,10 +101,10 @@ fn run(que: Arc<MsQueue<Command>>){
                     .read_to_end(&mut buf);
                 match res{
                     Ok(_) => {
-                        sender.send(Ok(buf));
+                        sender.send(Ok(buf)).unwrap();
                     },
                     Err(x) => {
-                        sender.send(Err(x));
+                        sender.send(Err(x)).unwrap();
                     }
                 }
             },
@@ -116,10 +116,10 @@ fn run(que: Arc<MsQueue<Command>>){
                     .read(&mut buf);
                 match res{
                     Ok(_) => {
-                        sender.send(Ok(buf));
+                        sender.send(Ok(buf)).unwrap();
                     },
                     Err(x) => {
-                        sender.send(Err(x));
+                        sender.send(Err(x)).unwrap();
                     }
                 }
             },
@@ -130,10 +130,10 @@ fn run(que: Arc<MsQueue<Command>>){
                     .write(&buf);
                 match res{
                     Ok(_) => {
-                        sender.send(Ok(()));
+                        sender.send(Ok(())).unwrap();
                     },
                     Err(x) => {
-                        sender.send(Err(x));
+                        sender.send(Err(x)).unwrap();
                     }
                 }
             },
@@ -144,10 +144,10 @@ fn run(que: Arc<MsQueue<Command>>){
                     .seek(seek);
                 match res{
                     Ok(_) => {
-                        sender.send(Ok(()));
+                        sender.send(Ok(())).unwrap();
                     },
                     Err(x) => {
-                        sender.send(Err(x));
+                        sender.send(Err(x)).unwrap();
                     }
                 }
             },

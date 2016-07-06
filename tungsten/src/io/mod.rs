@@ -10,7 +10,7 @@
 
 mod stream;
 
-use std::sync::mpsc::{Sender,Receiver,self};
+use std::sync::mpsc::{Receiver,self};
 
 use self::stream::{FileId,Stream,Command};
 
@@ -24,96 +24,104 @@ enum FileState{
 }
 
 impl FileState{
+    // TODO change wen lifeliness is implemented.
     fn get_id(&mut self) -> FileId{
-        match self{
-            &mut FileState::Ready(x) => x,
-            &mut FileState::Wait(recv) => {
-                let id = recv.recv().unwrap().unwrap();
-                *self = FileState::Ready(id);
-                id
+        let id = match self{
+            &mut FileState::Ready(ref x) => return x.clone(),
+            &mut FileState::Wait(ref recv) => {
+                recv.recv().unwrap().unwrap()
             },
-        }
+        };
+        *self = FileState::Ready(id);
+        id
     }
 
     fn wait(&mut self) -> Result<()>{
-        match self{
-            FileState::Wait(recv) => {
-                let id = try!(recv.recv().unwrap());
-                *self = FileState::Ready(id);
+        let id = match self{
+            &mut FileState::Wait(ref recv) => {
+                try!(recv.recv().unwrap())
             },
-            _ => Ok(()),
-        }
+            _ => return Ok(()),
+        };
+        *self = FileState::Ready(id);
+        Ok(())
     }
 }
 
-struct WriteResult(Receiver<Result<()>>);
+pub struct WriteResult(Option<Receiver<Result<()>>>);
 
 impl WriteResult{
-    fn wait(&mut self) -> Result<()>{
-        self.0.recv().unwrap()
+    pub fn wait(mut self) -> Result<()>{
+        self.0.take().unwrap().recv().unwrap()
     }
 }
 
 impl Drop for WriteResult{
     fn drop(&mut self){
-        self.0.recv().unwrap().expect("File write returned an error.");
+        if let Some(ref x) = self.0{
+            x.recv().unwrap()
+                .expect("File write returned an error.");
+        }
     }
 }
 
-struct ReadResult(Receiver<Result<Vec<u8>>>);
+pub struct ReadResult(Option<Receiver<Result<Vec<u8>>>>);
 
 impl ReadResult{
-    fn wait(&mut self) -> Result<Vec<u8>>{
-        self.0.recv().unwrap()
+    pub fn wait(mut self) -> Result<Vec<u8>>{
+        self.0.take().unwrap().recv().unwrap()
     }
 }
 
 impl Drop for ReadResult{
     fn drop(&mut self){
-        self.0.recv().unwrap().expect("File write returned an error.");
+        if let Some(ref x) = self.0{
+            x.recv().unwrap()
+                .expect("File write returned an error.");
+        }
     }
 }
 
-struct File(FileState);
+pub struct File(FileState);
 
 impl File{
-    fn open<P: AsRef<Path>>(path: P) -> Self{
+    pub fn open<P: AsRef<Path>>(path: P) -> Self{
         let (send,recv) = mpsc::channel();
-        Stream::que(Command::Open(path.to_path_buf(),send));
+        Stream::que(Command::Open(path.as_ref().to_path_buf(),send));
         File(FileState::Wait(recv))
     }
 
-    fn create<P: AsRef<Path>>(path: P) -> Self{
+    pub fn create<P: AsRef<Path>>(path: P) -> Self{
         let (send,recv) = mpsc::channel();
-        Stream::que(Command::Create(path.to_path_buf(),send));
+        Stream::que(Command::Create(path.as_ref().to_path_buf(),send));
         File(FileState::Wait(recv))
     }
 
-    fn ready(&mut self) -> Result<()>{
+    pub fn ready(&mut self) -> Result<()>{
         self.0.wait()
     }
 
-    fn write(&mut self,data: &[u8]) -> WriteResult{
+    pub fn write(&mut self,data: &[u8]) -> WriteResult{
         let (send,recv) = mpsc::channel();
         let id = self.0.get_id();
-        let buf = Vec::with_capacity(data.len());
+        let mut buf = Vec::with_capacity(data.len());
         buf.extend_from_slice(data);
-        Stream::que(Command::Write(data,id,send));
-        WriteResult(recv)
+        Stream::que(Command::Write(buf,id,send));
+        WriteResult(Some(recv))
     }
 
-    fn read(&mut self,amount: usize) -> ReadResult{
+    pub fn read(&mut self,amount: usize) -> ReadResult{
         let (send,recv) = mpsc::channel();
         let id = self.0.get_id();
         Stream::que(Command::Read(amount,id,send));
-        ReadResult(recv)
+        ReadResult(Some(recv))
     }
 
-    fn read_to_end(&mut self) -> ReadResult{
+    pub fn read_to_end(&mut self) -> ReadResult{
         let (send,recv) = mpsc::channel();
         let id = self.0.get_id();
         Stream::que(Command::ReadFully(id,send));
-        ReadResult(recv)
+        ReadResult(Some(recv))
     }
 }
 

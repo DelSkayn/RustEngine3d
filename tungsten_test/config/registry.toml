@@ -7,3 +7,8 @@ title = "tungsten test project"
 [general]
 quit_on_esc = true
 
+[render.vulkan.log]
+debug = true
+information = true
+error = true
+warning = true

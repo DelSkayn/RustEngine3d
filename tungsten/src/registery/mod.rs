@@ -28,12 +28,14 @@ use std::result::Result as StdResult;
 use std::path::Path;
 use std::path::PathBuf;
 
+use io::File;
+
 
 mod register_type;
-use self::register_type::RegistryType;
+use self::register_type::RegisteryType;
 
 lazy_static!{
-    static ref SETTINGS: RwLock<Registry> 
+    static ref SETTINGS: RwLock<Registery> 
         = RwLock::new(Default::default());
     static ref SETTINGS_FILE: RwLock<PathBuf> 
         = RwLock::new(Path::new("./config/registry.toml").to_path_buf());
@@ -104,11 +106,11 @@ impl <T: Default> RegResult<T>{
 
 pub type Result<T> = RegResult<T>;
 
-pub struct Registry(Table);
+pub struct Registery(Table);
 
-impl Registry {
+impl Registery {
     fn new() -> Self {
-        Registry(Table::new())
+        Registery(Table::new())
     }
 
     pub fn running() -> bool {
@@ -120,13 +122,13 @@ impl Registry {
     }
 
     pub fn get_self<T>(&self, name: &str) -> Result<T>
-        where T: RegistryType
+        where T: RegisteryType
     {
         Self::get_rec(&self.0, name)
     }
 
     fn get_rec<T>(table: &Table, name: &str) -> Result<T>
-        where T: RegistryType
+        where T: RegisteryType
     {
         if name.contains('.') {
             let (first, rest) = name.split_at(name.find('.').unwrap());
@@ -149,13 +151,13 @@ impl Registry {
     }
 
     pub fn get<T>(name: &str) -> Result<T>
-        where T: RegistryType
+        where T: RegisteryType
     {
-        SETTINGS.read().expect("Registry lock poised!").get_self(name)
+        SETTINGS.read().expect("Registery lock poised!").get_self(name)
     }
 
     pub fn set_self<T>(&mut self, name: &str, value: T)
-        where T: RegistryType
+        where T: RegisteryType
     {
         let mut value = T::to_value(value);
         if name.contains('.') {
@@ -172,23 +174,25 @@ impl Registry {
         }
     }
     pub fn set<T>(name: &str, value: T)
-        where T: RegistryType
+        where T: RegisteryType
     {
         SETTINGS.write().unwrap().set_self(name, value)
     }
 
-    pub fn set_full(registry: Registry) {
-        (*SETTINGS.write().expect("Registry lock poised!")) = registry;
+    pub fn set_full(registry: Registery) {
+        (*SETTINGS.write().expect("Registery lock poised!")) = registry;
     }
 
     pub fn set_file<P: AsRef<Path>>(path: P) {
-        (*SETTINGS_FILE.write().expect("Registry file path poised!")) = path.as_ref().to_path_buf();
+        (*SETTINGS_FILE.write().expect("Registery file path poised!")) = path.as_ref().to_path_buf();
     }
 
     pub fn read_from_file() {
         let path = SETTINGS_FILE.read().unwrap().clone();
-        /*
-        let res = Io::read(path.clone()).into_inner().map(|e| String::from_utf8(e).unwrap());
+        let mut file = File::open(path.clone());
+        file.ready().unwrap();
+        let res = file.read_to_end().wait()
+            .map(|e| String::from_utf8(e).unwrap());
         match res {
             Ok(x) => {
                 let mut parser = Parser::new(&x);
@@ -212,13 +216,12 @@ impl Registry {
                       path.to_str().unwrap());
             }
         }
-        */
     }
 }
 
-impl Default for Registry {
+impl Default for Registery {
     fn default() -> Self {
-        let mut res = Registry::new();
+        let mut res = Registery::new();
         res.set_self("window.size", [800u64, 600u64]);
         res.set_self("window.pos", [0u64, 0u64]);
         res.set_self("window.title", "Tungsten".to_string());

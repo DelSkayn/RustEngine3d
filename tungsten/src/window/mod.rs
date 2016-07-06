@@ -1,6 +1,6 @@
 extern crate glutin;
 
-use registry::Registry;
+use super::registery::Registery;
 
 use self::glutin::Window as WindowExt;
 use self::glutin::Event as EventExt;
@@ -17,11 +17,11 @@ impl Window {
     pub fn from_registry() -> Self {
         info!("Creating window from settings!");
 
-        let dimensions: [u64; 2] = Registry::get("window.size").or([300,300]);
-        let vsync = Registry::get("window.vsync").or(false);
-        let position: [u64; 2] = Registry::get("window.position").or([0,0]);
-        let title = Registry::get("window.title").or("Tungsten engine".to_string());
-        let quit_on_esc = Registry::get("general.quit_on_esc").or(true);
+        let dimensions: [u64; 2] = Registery::get("window.size").or([300,300]);
+        let vsync = Registery::get("window.vsync").or(false);
+        let position: [u64; 2] = Registery::get("window.position").or([0,0]);
+        let title = Registery::get("window.title").or("Tungsten engine".to_string());
+        let quit_on_esc = Registery::get("general.quit_on_esc").or(true);
 
         info!("Window size: {}x{}", dimensions[0], dimensions[1]);
         info!("Window position: {}x{}", position[0], position[1]);
@@ -52,11 +52,11 @@ impl Window {
         for event in self.window.poll_events() {
             match event {
                 EventExt::Closed => {
-                    Registry::quit();
+                    Registery::quit();
                 }
                 EventExt::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Escape)) => {
                     if self.quit_on_esc {
-                        Registry::quit();
+                        Registery::quit();
                     }
                 }
                 _ => {}

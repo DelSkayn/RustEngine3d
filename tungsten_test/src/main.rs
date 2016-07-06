@@ -1,6 +1,5 @@
 extern crate tungsten;
 
-use tungsten::Registry;
 use self::tungsten::Game;
 
 struct TestGame;

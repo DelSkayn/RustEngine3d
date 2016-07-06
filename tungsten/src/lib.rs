@@ -17,7 +17,7 @@ extern crate lazy_static;
 
 
 mod engine;
-mod registry;
+mod registery;
 mod io;
 mod window;
 mod util;
@@ -26,7 +26,7 @@ mod render;
 
 pub mod logic;
 pub use engine::Engine;
-pub use registry::Registry;
+pub use registery::Registery;
 
 pub trait Game {
     fn new() -> Self;

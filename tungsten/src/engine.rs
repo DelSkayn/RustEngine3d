@@ -1,4 +1,4 @@
-use registry::Registry;
+use registery::Registery;
 
 use Game;
 
@@ -40,7 +40,7 @@ impl<G: Game + Send> Engine<G> {
 
 
         Logger::init().unwrap();
-        Registry::read_from_file();
+        Registery::read_from_file();
         let console = Console::new(SystemTerminal::new());
         Engine {
                 game: G::new(),
@@ -53,7 +53,7 @@ impl<G: Game + Send> Engine<G> {
     }
 
     fn game_loop(&mut self) {
-        while Registry::running() {
+        while Registery::running() {
             let window = &mut self.window;
             let console = &mut self.console;
             task::join(|| window.update(), || console.update());

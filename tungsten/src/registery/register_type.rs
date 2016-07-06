@@ -1,13 +1,13 @@
 
 use toml::Value;
 
-pub trait RegistryType: Sized {
+pub trait RegisteryType: Sized {
     fn to_value(self) -> Value;
     fn from_value(v: &Value) -> Option<Self>;
 }
 
 
-impl RegistryType for u64 {
+impl RegisteryType for u64 {
     fn to_value(self) -> Value {
         Value::Integer(self as i64)
     }
@@ -17,7 +17,7 @@ impl RegistryType for u64 {
     }
 }
 
-impl RegistryType for i64 {
+impl RegisteryType for i64 {
     fn to_value(self) -> Value {
         Value::Integer(self)
     }
@@ -27,7 +27,7 @@ impl RegistryType for i64 {
     }
 }
 
-impl RegistryType for u32 {
+impl RegisteryType for u32 {
     fn to_value(self) -> Value {
         Value::Integer(self as i64)
     }
@@ -37,7 +37,7 @@ impl RegistryType for u32 {
     }
 }
 
-impl RegistryType for i32 {
+impl RegisteryType for i32 {
     fn to_value(self) -> Value {
         Value::Integer(self as i64)
     }
@@ -47,7 +47,7 @@ impl RegistryType for i32 {
     }
 }
 
-impl RegistryType for bool {
+impl RegisteryType for bool {
     fn to_value(self) -> Value {
         Value::Boolean(self)
     }
@@ -57,7 +57,7 @@ impl RegistryType for bool {
     }
 }
 
-impl RegistryType for f32 {
+impl RegisteryType for f32 {
     fn to_value(self) -> Value {
         Value::Float(self as f64)
     }
@@ -67,7 +67,7 @@ impl RegistryType for f32 {
     }
 }
 
-impl RegistryType for f64 {
+impl RegisteryType for f64 {
     fn to_value(self) -> Value {
         Value::Float(self)
     }
@@ -77,7 +77,7 @@ impl RegistryType for f64 {
     }
 }
 
-impl RegistryType for String {
+impl RegisteryType for String {
     fn to_value(self) -> Value {
         Value::String(self)
     }
@@ -87,8 +87,8 @@ impl RegistryType for String {
     }
 }
 
-impl<T> RegistryType for [T; 2]
-    where T: RegistryType + Clone
+impl<T> RegisteryType for [T; 2]
+    where T: RegisteryType + Clone
 {
     fn to_value(self) -> Value {
         Value::Array(self.iter().map(|e| T::to_value(e.clone())).collect())
