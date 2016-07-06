@@ -1,13 +1,12 @@
 use registery::Registery;
-
-use Game;
-
-use task;
-
+use state::State;
 use window::Window;
 use util::Logger;
 use console::{Console, SystemTerminal};
 use render::Render;
+use Game;
+use task;
+
 
 const BANNER: &'static str = r#"
   ______                                        __                       
@@ -49,11 +48,11 @@ impl<G: Game + Send> Engine<G> {
                 render: Render::new(),
             }
             .game_loop();
-        println!("---------------------------- Engine Quit! --------------------------------");
+        println!("\x1B[1;31m---------------------------- Engine Quit! --------------------------------\x1B[0m");
     }
 
     fn game_loop(&mut self) {
-        while Registery::running() {
+        while State::running(){
             let window = &mut self.window;
             let console = &mut self.console;
             task::join(|| window.update(), || console.update());

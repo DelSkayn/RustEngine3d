@@ -1,6 +1,7 @@
 extern crate glutin;
 
 use super::registery::Registery;
+use super::state::State;
 
 use self::glutin::Window as WindowExt;
 use self::glutin::Event as EventExt;
@@ -52,11 +53,11 @@ impl Window {
         for event in self.window.poll_events() {
             match event {
                 EventExt::Closed => {
-                    Registery::quit();
+                    State::quit();
                 }
                 EventExt::KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Escape)) => {
                     if self.quit_on_esc {
-                        Registery::quit();
+                        State::quit();
                     }
                 }
                 _ => {}

@@ -18,15 +18,12 @@ use toml::Table;
 use toml::Value;
 use toml::Parser;
 
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
 
 use std::sync::RwLock;
 
 use std::result::Result as StdResult;
 
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path,PathBuf};
 
 use io::File;
 
@@ -38,8 +35,7 @@ lazy_static!{
     static ref SETTINGS: RwLock<Registery> 
         = RwLock::new(Default::default());
     static ref SETTINGS_FILE: RwLock<PathBuf> 
-        = RwLock::new(Path::new("./config/registry.toml").to_path_buf());
-    static ref RUNNING: AtomicBool = AtomicBool::new(true);
+        = RwLock::new(Path::new("./config/registery.toml").to_path_buf());
 }
 
 #[derive(Debug)]
@@ -48,6 +44,7 @@ pub enum Error {
     InvalidType,
 }
 
+#[derive(Debug)]
 pub enum RegResult<T>{
     Ok(T),
     Err(Error),
@@ -111,14 +108,6 @@ pub struct Registery(Table);
 impl Registery {
     fn new() -> Self {
         Registery(Table::new())
-    }
-
-    pub fn running() -> bool {
-        RUNNING.load(Ordering::Acquire)
-    }
-
-    pub fn quit() {
-        RUNNING.store(false, Ordering::Release);
     }
 
     pub fn get_self<T>(&self, name: &str) -> Result<T>
@@ -189,32 +178,35 @@ impl Registery {
 
     pub fn read_from_file() {
         let path = SETTINGS_FILE.read().unwrap().clone();
+        info!("Reading config file at: {}",path.to_str().unwrap());
         let mut file = File::open(path.clone());
-        file.ready().unwrap();
-        let res = file.read_to_end().wait()
-            .map(|e| String::from_utf8(e).unwrap());
-        match res {
-            Ok(x) => {
-                let mut parser = Parser::new(&x);
-                let res = parser.parse();
-                match res {
-                    Some(x) => {
-                        let mut s = SETTINGS.write().unwrap();
-                        for (key, value) in x.into_iter() {
-                            s.0.insert(key.clone(), value.clone());
+        if let Ok(_) = file.ready(){
+            let res = file.read_to_end().wait()
+                .map(|e| String::from_utf8(e).unwrap());
+            match res {
+                Ok(x) => {
+                    let mut parser = Parser::new(&x);
+                    let res = parser.parse();
+                    match res {
+                        Some(x) => {
+                            let mut s = SETTINGS.write().unwrap();
+                            for (key, value) in x.into_iter() {
+                                s.0.insert(key.clone(), value.clone());
+                            }
+                        }
+                        None => {
+                            warn!("Errors while parsing registry file: {:?}", parser.errors);
+                            return;
                         }
                     }
-                    None => {
-                        warn!("Errors while parsing registry file: {:?}", parser.errors);
-                        return;
-                    }
-                }
 
+                }
+                Err(e) => {
+                    warn!("Could not read config file. reason : {:?}",e);
+                }
             }
-            Err(_) => {
-                warn!("Could not find config file at path: {}",
-                      path.to_str().unwrap());
-            }
+        }else{
+            warn!("Log file not found, using default.");
         }
     }
 }

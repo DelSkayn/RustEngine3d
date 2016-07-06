@@ -15,7 +15,7 @@ pub use self::sys_terminal::SystemTerminal;
 
 use std::collections::HashMap;
 
-use registery::Registery;
+use state::State;
 
 pub trait Terminal {
     fn read(&mut self) -> Vec<String>;
@@ -38,7 +38,7 @@ impl<T: Terminal> Console<T> {
         };
         c.add_command("quit".to_string(), |_, t| {
             t.write("quiting!".to_string());
-            Registery::quit();
+            State::quit();
         });
         c
     }

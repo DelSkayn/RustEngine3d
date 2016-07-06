@@ -36,8 +36,15 @@ pub enum Command{
 }
 
 pub struct Stream{
-    join: JoinHandle<()>,
+    join: Option<JoinHandle<()>>,
     que: Arc<MsQueue<Command>>,
+}
+
+impl Drop for Stream{
+    fn drop(&mut self){
+        self.que.push(Command::Stop);
+        self.join.take().unwrap().join().expect("Stream thread ended premeturly");
+    }
 }
 
 impl Stream{
@@ -47,7 +54,7 @@ impl Stream{
         let join = thread::spawn(|| run(c_que));
         Stream{
             que: que,
-            join: join,
+            join: Some(join),
         }
     }
 
@@ -98,7 +105,7 @@ fn run(que: Arc<MsQueue<Command>>){
                 }
                 let res = open_files.get_mut(&id)
                     .expect("File not opened before reading.")
-                    .read_to_end(&mut buf);
+                    .read(&mut buf);
                 match res{
                     Ok(_) => {
                         sender.send(Ok(buf)).unwrap();
@@ -113,7 +120,7 @@ fn run(que: Arc<MsQueue<Command>>){
                 let mut buf = Vec::new();
                 let res = open_files.get_mut(&id)
                     .expect("File not opened before reading.")
-                    .read(&mut buf);
+                    .read_to_end(&mut buf);
                 match res{
                     Ok(_) => {
                         sender.send(Ok(buf)).unwrap();

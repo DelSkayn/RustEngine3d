@@ -100,7 +100,10 @@ impl Vulkan{
         let device = device.unwrap();
         // TODO: Test if features are supported.
         let features = Features::none();
-        let dev_extension = DeviceExtensions::none();
+        let dev_extension = DeviceExtensions{
+            khr_swapchain: true,
+            khr_display_swapchain: false,
+        };
         info!("Picked device: {}",device.name());
         // TODO remove unwrap
         let (a,_) = match Device::new(&device,&features

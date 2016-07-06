@@ -23,10 +23,12 @@ mod window;
 mod util;
 mod console;
 mod render;
+mod state;
 
 pub mod logic;
 pub use engine::Engine;
 pub use registery::Registery;
+pub use state::State;
 
 pub trait Game {
     fn new() -> Self;

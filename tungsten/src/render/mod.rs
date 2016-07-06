@@ -13,7 +13,6 @@ pub enum Error{
 
 trait Renderer{}
 
-
 pub struct Render{
     renderer: Box<Renderer>,
 }

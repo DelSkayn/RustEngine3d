@@ -29,7 +29,7 @@ pub struct Logger;
 
 impl Log for Logger {
     fn enabled(&self, meta: &LogMetadata) -> bool {
-        meta.level() <= LogLevel::Info
+        meta.level() <= LogLevel::Trace
     }
 
     fn log(&self, record: &LogRecord) {
@@ -49,7 +49,7 @@ impl Logger {
     /// Called once at the start of the engine.
     pub fn init() -> Result<(), SetLoggerError> {
         log::set_logger(|max_log_level| {
-            max_log_level.set(LogLevelFilter::Info);
+            max_log_level.set(LogLevelFilter::Trace);
             Box::new(Logger)
         })
     }
