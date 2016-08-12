@@ -41,11 +41,13 @@ impl<G: Game + Send> Engine<G> {
         Logger::init().unwrap();
         Registery::read_from_file();
         let console = Console::new(SystemTerminal::new());
+        let window = Window::from_registry();
+        let render = Render::new(window.get_context());
         Engine {
                 game: G::new(),
-                window: Window::from_registry(),
+                window: window,
                 console: console,
-                render: Render::new(),
+                render: render,
             }
             .game_loop();
         println!("\x1B[1;31m---------------------------- Engine Quit! --------------------------------\x1B[0m");
@@ -56,6 +58,7 @@ impl<G: Game + Send> Engine<G> {
             let window = &mut self.window;
             let console = &mut self.console;
             task::join(|| window.update(), || console.update());
+            self.render.render();
         }
     }
 }

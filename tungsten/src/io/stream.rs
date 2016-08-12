@@ -1,4 +1,8 @@
+/// module containing the implentation of the stream.
+
 extern crate crossbeam;
+
+use super::super::util::FnBox;
 
 use self::crossbeam::sync::MsQueue;
 
@@ -19,14 +23,19 @@ use std::io::Seek;
 
 use std::thread;
 
+
 lazy_static!{ static ref STREAM: Stream = Stream::new(); }
 
+/// A unique of a file.
 #[derive(Eq,PartialEq,Clone,Copy)]
 pub struct FileId(usize);
 
+/// Enum containing all operations.
 pub enum Command{
     Read(usize,FileId,Sender<Result<Vec<u8>>>),
     ReadFully(FileId,Sender<Result<Vec<u8>>>),
+    ReadCallback(usize,FileId,Box<FnBox<Result<Vec<u8>>,Output = ()> + Send>),
+    ReadFullyCallback(FileId,Box<FnBox<Result<Vec<u8>>,Output = ()> + Send>),
     Write(Vec<u8>,FileId,Sender<Result<()>>),
     Seek(SeekFrom,FileId,Sender<Result<()>>),
     Open(PathBuf,Sender<Result<FileId>>),
@@ -63,6 +72,8 @@ impl Stream{
     }
 }
 
+//TODO push callbacks to work queue.
+/// Runs a thread.
 fn run(que: Arc<MsQueue<Command>>){
     let mut open_files = HashMap::new();
     // TODO impl for wrapping integer.
@@ -127,6 +138,39 @@ fn run(que: Arc<MsQueue<Command>>){
                     },
                     Err(x) => {
                         sender.send(Err(x)).unwrap();
+                    }
+                }
+            },
+            Command::ReadCallback(size,file_id,callback) => {
+                let FileId(id) = file_id;
+                let mut buf = Vec::with_capacity(size);
+                for _ in 0..size{
+                    buf.push(0);
+                }
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before reading.")
+                    .read(&mut buf);
+                match res{
+                    Ok(_) => {
+                        callback.call_box(Ok(buf));
+                    },
+                    Err(x) => {
+                        callback.call_box(Err(x));
+                    }
+                }
+            },
+            Command::ReadFullyCallback(file_id,callback) => {
+                let FileId(id) = file_id;
+                let mut buf = Vec::new();
+                let res = open_files.get_mut(&id)
+                    .expect("File not opened before reading.")
+                    .read_to_end(&mut buf);
+                match res{
+                    Ok(_) => {
+                        callback.call_box(Ok(buf));
+                    },
+                    Err(x) => {
+                        callback.call_box(Err(x));
                     }
                 }
             },

@@ -8,10 +8,12 @@
 //! it currently only loads from the file and is not able to write the settings back.
 //! This might changes some day but for the close future i do not see it happening quickley.
 //!
-//! TODO:
-//! * Move running out of registry.
-//! * Remove the `SETTINGS_FILE` var since the file can now only be used for loading.
-//! * Add a way to notify systems of setting changes.
+//! ### TODO:
+//!
+//!     * Move running out of registry.
+//!     * Remove the `SETTINGS_FILE` var since the file can now only be used for loading.
+//!     * Add a way to notify systems of setting changes.
+//!     * Add a way to split settings into multiple files in different locations.
 //!
 
 use toml::Table;

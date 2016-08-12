@@ -7,8 +7,11 @@ title = "tungsten test project"
 [general]
 quit_on_esc = true
 
+[render]
+prefered = "vulkan"
+
 [render.vulkan.log]
-debug = true
-information = true
+debug = false
+information = false
 error = true
 warning = true

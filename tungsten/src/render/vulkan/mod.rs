@@ -1,48 +1,66 @@
 extern crate vulkano;
 
-use self::vulkano::instance::{Instance,InstanceExtensions,Features,PhysicalDevice,PhysicalDeviceType};
+mod swapchain;
+mod device;
+
+use self::swapchain::Swapchain;
+
+use self::device::Device;
+
+use self::vulkano::instance::{Instance,InstanceExtensions};
+use self::vulkano::swapchain::Surface;
 use self::vulkano::instance::debug::{DebugCallback,MessageTypes};
-use self::vulkano::device::{Device,DeviceExtensions};
 
 use std::sync::Arc;
 
 use registery::Registery;
 
-use super::{Renderer,Error};
+pub use super::{Error,WindowContext,RenderQue};
+use super::Renderer;
 
 pub struct Vulkan{
     instance: Arc<Instance>,
-    device: Arc<Device>,
+    device: Device,
+    swapchain: Swapchain,
+    surface: Arc<Surface>,
     log: DebugCallback,
 }
 
-static LAYER_NAME: &'static str = "VK_LAYER_LUNARG_standard_validation";
+static LAYER_NAME_1: &'static str = "VK_LAYER_LUNARG_standard_validation";
+static LAYER_NAME_2: &'static str = "VK_LAYER_LUNARG_image";
+static LAYER_NAME_3: &'static str = "VK_LAYER_LUNARG_parameter_validation";
+static LAYER_NAME_4: &'static str = "VK_LAYER_LUNARG_core_validation";
+static LAYER_NAME_5: &'static str = "VK_LAYER_LUNARG_object_tracker";
+static LAYER_NAME_6: &'static str = "VK_LAYER_LUNARG_swapchain";
 
-#[derive(Eq,PartialEq,Ord,PartialOrd,Clone,Copy)]
-struct DeviceRating(usize);
-
-impl DeviceRating{
-    fn lowest() -> DeviceRating{
-        DeviceRating(0)
+impl Renderer for Vulkan{
+    fn render(&mut self,_: RenderQue){
     }
 }
 
-impl Renderer for Vulkan{}
-
 impl Vulkan{
-    pub fn new() -> Result<Self,Error>{
+
+    pub fn new(window: WindowContext) -> Result<Self,Error>{
         info!("Creating vulkan renderer.");
         let extensions = InstanceExtensions::supported_by_core();
-        let layers = vec![&LAYER_NAME];
+        let layers = vec![
+            &LAYER_NAME_1,
+            &LAYER_NAME_2,
+            &LAYER_NAME_3,
+            &LAYER_NAME_4,
+            &LAYER_NAME_5,
+            &LAYER_NAME_6,
+        ];
         let instance = Instance::new(None,&extensions,layers).unwrap();
-        let device = match Self::create_device(&instance){
-            Some(x) => x,
-            None => return Err(Error::Other("Could not create device")),
-        };
         let log = Self::create_debug_logger(&instance);
+        let surface = try!(Self::get_surface(&instance,window.clone()));
+        let device = try!(Device::new(&instance,&surface));
+        let swapchain = try!(Swapchain::new(&device,&surface,window));
         Ok(Vulkan{
             instance: instance,
             device: device,
+            swapchain: swapchain,
+            surface: surface,
             log: log,
         })
     }
@@ -59,72 +77,29 @@ impl Vulkan{
         };
         DebugCallback::new(instance,ty,|ref message|{
             if message.ty.error{
-                error!("[VULKAN] layer: {} \n   {}",message.layer_prefix,message.description);
+                error!("[VULKAN] layer: {} #:{}",message.layer_prefix,message.description);
             }else if message.ty.warning || message.ty.performance_warning{
-                warn!("[VULKAN] layer: {} \n   {}",message.layer_prefix,message.description);
+                warn!("[VULKAN] layer: {} #:{}",message.layer_prefix,message.description);
             }else if message.ty.information{
-                info!("[VULKAN] layer: {} \n   {}",message.layer_prefix,message.description);
+                info!("[VULKAN] layer: {} #:{}",message.layer_prefix,message.description);
             }else if message.ty.debug{
-                debug!("[VULKAN] layer: {} \n   {}",message.layer_prefix,message.description);
+                debug!("[VULKAN] layer: {} #:{}",message.layer_prefix,message.description);
             }
         }).unwrap()
     }
 
-    fn create_device(instance: &Arc<Instance>) -> Option<Arc<Device>>{
-        let mut device:Option<PhysicalDevice> = None;
-        let mut dev_rating = DeviceRating::lowest();
+    #[cfg(unix)]
+    fn get_surface(instance: &Arc<Instance>,window: WindowContext) -> Result<Arc<Surface>,Error>{
+        unsafe{
+            let display = try!(window.get_display_ptr().ok_or(Error::PlatformNotSupported));
+            Surface::from_xlib(instance,display,window.get_window_ptr().unwrap())
+                .map_err(|_| Error::Other("Could not create surface"))
 
-        let itt = PhysicalDevice::enumerate(instance);
-        for dev in itt{
-            info!("Found Physical Rendering device.");
-            info!("name: {}",dev.name());
-            info!("vulkan api version: {:?}", dev.api_version());
-            let type_name = match dev.ty(){
-                PhysicalDeviceType::IntegratedGpu => "Intergrated",
-                PhysicalDeviceType::DiscreteGpu => "Discrete",
-                PhysicalDeviceType::VirtualGpu => "Virtual",
-                PhysicalDeviceType::Cpu => "Cpu",
-                PhysicalDeviceType::Other=> "Type not regocnized",
-            };
-            info!("device type: {}",type_name);
-            if device.is_none(){
-                device = Some(dev);
-            }else if dev_rating < Self::get_device_rating(&dev){
-                dev_rating = Self::get_device_rating(&dev);
-                device = Some(dev);
-            }
         }
-        if let None = device{
-            error!("No rendering device found");
-        }
-        let device = device.unwrap();
-        // TODO: Test if features are supported.
-        let features = Features::none();
-        let dev_extension = DeviceExtensions{
-            khr_swapchain: true,
-            khr_display_swapchain: false,
-        };
-        info!("Picked device: {}",device.name());
-        // TODO remove unwrap
-        let (a,_) = match Device::new(&device,&features
-                                      ,&dev_extension
-                                      ,Vec::new()
-                                      ,Vec::new())
-        {
-            Ok(x) => x,
-            Err(_) => return None,
-        };
-        Some(a)
     }
 
-    fn get_device_rating(device: &PhysicalDevice) -> DeviceRating{
-        // TODO: Extend rating device.
-        DeviceRating(match device.ty(){
-            PhysicalDeviceType::IntegratedGpu => 2,
-            PhysicalDeviceType::DiscreteGpu => 3,
-            PhysicalDeviceType::VirtualGpu => 2,
-            PhysicalDeviceType::Cpu => 1, 
-            PhysicalDeviceType::Other=> 0,
-        })
+    #[cfg(not(unix))]
+    fn get_surface(instance: &Arc<Instance>) -> Result<Surface,Error>{
+        unimplemented!();
     }
 }

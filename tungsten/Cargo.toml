@@ -5,15 +5,20 @@ authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
 glutin = "*"
+glium = "*"
 log = "*" 
 time = "*"
 crossbeam = "*"
 lazy_static = "*"
 toml = "*"
-vulkano = "*"
+libc = "*"
 
 [dependencies.task]
 path = "../../task-rs"
+
+[dependencies.vulkano]
+path = "../../vulkano/vulkano"
+
 
 [profile.dev]
 opt-level = 0
