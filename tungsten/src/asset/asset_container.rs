@@ -9,13 +9,21 @@ struct ContainerData<T>{
     changed: AtomicUsize,
 }
 
-#[derive(Clone)]
 pub struct Container<T>{
     data: Arc<ContainerData<T>>,
     // Identifier used to determin if data
     // was changed in the mean time without checking
     // the whole asset.
     changed: usize,
+}
+
+impl<T> Clone for Container<T>{
+    fn clone(&self) -> Self{
+        Container{
+            data: self.data.clone(),
+            changed: self.changed,
+        }
+    }
 }
 
 impl<T> Container<T>{
@@ -26,6 +34,10 @@ impl<T> Container<T>{
         };
         d.data.store(Some(Owned::new(data))
                      ,Ordering::Release);
+        Container{
+            data: Arc::new(d),
+            changed: 0
+        }
     }
 
     pub fn empty() -> Self{
@@ -48,6 +60,10 @@ impl<T> Container<T>{
 
     pub fn changed(&self) -> bool{
         self.changed == self.data.changed.load(Ordering::Acquire)
+    }
+
+    pub fn loaded(&self) -> bool{
+        self.data.data.cas(None,None,Ordering::AcqRel).is_err()
     }
 
     pub fn borrow<F>(&self,func: F)

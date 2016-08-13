@@ -8,7 +8,7 @@ title = "tungsten test project"
 quit_on_esc = true
 
 [render]
-prefered = "vulkan"
+prefered = "opengl"
 
 [render.vulkan.log]
 debug = false

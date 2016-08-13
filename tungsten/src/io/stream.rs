@@ -79,7 +79,9 @@ fn run(que: Arc<MsQueue<Command>>){
     // TODO impl for wrapping integer.
     let mut next = 0usize;
     loop{
-        match que.pop(){
+        let res = que.pop();
+        trace!("Recieved io event");
+        match res { 
             Command::Open(path,sender) => {
                 let file = File::open(path);
                 match file{

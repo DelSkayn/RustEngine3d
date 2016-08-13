@@ -1,17 +1,34 @@
 
-use super::*;
 
-struct Mesh{
-    vertecies: Vec<f32>,
-    normals: Vec<f32>,
-    indecies: Vec<u32>,
+pub use super::*;
+
+mod obj;
+use self::obj::ObjLoader;
+
+pub enum MeshFileTypes{
+    Wavefront,
+    Collada,
 }
 
-impl Asset for Mesh{
-    fn from_data(data: Vec<u8>, extension: String) -> Mesh{
-        match extension.to_str() {
-            "obj" => load_obj(data),
+impl MeshFileTypes{
+    pub fn from_extension(ext: &str) -> Option<Self>{
+        match ext{
+            "obj" => Some(MeshFileTypes::Wavefront),
+            "dae" => Some(MeshFileTypes::Collada),
+            _ => None,
         }
     }
 }
-fn load_obj(data: Vec<u8>) -> Mesh{
+
+pub struct MeshLoader;
+
+impl MeshLoader{
+    pub fn load(ty: MeshFileTypes,file: Vec<u8>,place: Container<Mesh>){
+        match ty{
+            MeshFileTypes::Wavefront => {
+                ObjLoader::load(file,place);
+            }
+            MeshFileTypes::Collada => warn!("Collada mesh file not supported!"),
+        }
+    }
+}

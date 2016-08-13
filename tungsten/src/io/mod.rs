@@ -34,7 +34,7 @@ enum FileState{
 }
 
 impl FileState{
-    // TODO change wen lifeliness is implemented.
+    //TODO change wen lifeliness is implemented.
     fn get_id(&mut self) -> FileId{
         let id = match self{
             &mut FileState::Ready(ref x) => return x.clone(),
@@ -166,7 +166,7 @@ pub struct File(FileState);
 impl File{
     /// Open a file at path 
     /// us ready to recieve posible errors.
-    pub fn open<P: AsRef<Path>>(path: P) -> Self{
+    pub fn open<P: AsRef<Path>>(path: &P) -> Self{
         let (send,recv) = mpsc::channel();
         Stream::que(Command::Open(path.as_ref().to_path_buf(),send));
         File(FileState::Wait(recv))
@@ -174,7 +174,7 @@ impl File{
 
     /// Open a file at path, if it does not exist it will create it.
     /// us ready to recieve posible errors.
-    pub fn create<P: AsRef<Path>>(path: P) -> Self{
+    pub fn create<P: AsRef<Path>>(path: &P) -> Self{
         let (send,recv) = mpsc::channel();
         Stream::que(Command::Create(path.as_ref().to_path_buf(),send));
         File(FileState::Wait(recv))
