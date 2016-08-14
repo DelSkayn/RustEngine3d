@@ -10,6 +10,8 @@ use std::path::{Path,PathBuf};
 mod asset_container;
 pub use self::asset_container::*;
 
+mod data;
+
 mod mesh;
 use self::mesh::{MeshFileTypes,MeshLoader};
 
