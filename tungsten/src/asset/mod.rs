@@ -32,8 +32,7 @@ pub enum AssetId{
     Mesh(String),
     Texture(String),
     Material(String),
-}
-
+} 
 pub struct AssetData<T> {
     name: String,
     data: Container<T>,
@@ -57,17 +56,17 @@ impl Assets{
         let texture: Texture = Default::default();
 
         textures.insert("default".to_string(),AssetData{
-            name: "default_texture".to_string(),
+            name: "default".to_string(),
             data: Container::new(texture),
         });
 
         meshes.insert("default".to_string(),AssetData{
-            name: "default_mesh".to_string(),
+            name: "default".to_string(),
             data: Container::new(mesh),
         });
         
-        materials.insert("default_material".to_string(),AssetData{
-            name: "default_material".to_string(),
+        materials.insert("default".to_string(),AssetData{
+            name: "default".to_string(),
             data: Container::new(material),
         });
 
@@ -106,11 +105,41 @@ impl Assets{
         }
     }
 
-    pub fn unload_mesh(name: String){
-        match ASSETS.write().expect("Asset lock poised").meshes.remove(&name){
+    pub fn unload_mesh(name: &String){
+        match ASSETS.write().expect("Asset lock poised").meshes.remove(name){
             Some(_) => {},
             None => warn!("Tried to remove asset which was not loaded."),
         }
+    }
+
+    pub fn get_mesh(name: &String) -> Container<Mesh>{
+        let borrow = ASSETS.read().expect("Assets lock poised");
+        match borrow.meshes.get(name){
+            Some(x) => {
+                x.data.clone()
+            }
+            None => {
+                borrow.meshes.get(&"default".to_string())
+                    .as_ref().unwrap().data.clone()
+            }
+        }
+    }
+
+    pub fn get_material(name: &String) -> Container<Material>{
+        let borrow = ASSETS.read().expect("Assets lock poised");
+        match borrow.materials.get(name){
+            Some(x) => {
+                x.data.clone()
+            }
+            None => {
+                borrow.materials.get(&"default".to_string())
+                    .as_ref().unwrap().data.clone()
+            }
+        }
+    }
+
+    pub fn load_material<S>(name: String, path: S) where S: AsRef<Path>{
+        unimplemented!();
     }
 
     /// returns wether loading the mesh will result in conflicting

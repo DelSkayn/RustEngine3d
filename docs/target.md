@@ -27,4 +27,5 @@ Specificly Ogl 3.3 is the version is which the fixed pipeline is depreciated in 
 ### Linux/Windows/Mac
 
 Luckely rust code is platform independent, and this engine will also be.
-However this means that curtain features of rust which aren't platform independent. 
+However this means that certain features of rust which aren't platform independent cannot be used. 
+There is also the problem of vulkan swapchains and a lack of libraries to create the swapchains outside of linux.

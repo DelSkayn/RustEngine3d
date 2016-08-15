@@ -16,7 +16,7 @@ pub struct Ogl{
 impl Renderer for Ogl{
     fn render(&mut self,_: RenderQue){
         let mut frame = Frame::new(self.context.clone(),self.dimension);
-        frame.clear_color(0.0,0.0,0.0,1.0);
+        frame.clear_color(0.0,0.0,1.0,1.0);
         frame.finish().unwrap();
     }
 }

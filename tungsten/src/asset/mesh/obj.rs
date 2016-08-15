@@ -1,6 +1,6 @@
 
 
-use super::{Mesh,Container};
+use super::{Assets,Mesh,Container};
 
 pub struct ObjLoader;
 
@@ -37,6 +37,7 @@ impl ObjLoader{
                 normal_faces: None,
                 texture_faces: None,
             };
+            trace!("Obj: parsing file");
             for line in x.lines(){
                 if !Self::parse_line(line,&mut object){
                     return;
@@ -78,7 +79,7 @@ impl ObjLoader{
                 "#" => return true,//comment, ignore
                 "f" => return Self::parse_face(white,object),
                 "v" => return Self::parse_vertex(white,object),
-                "vn" => return Self::parse_vertex(white,object),
+                "vn" => return Self::parse_normal(white,object),
                 "vt" => return Self::parse_text_coord(white,object),
                 "o" => return Self::parse_name(white,object),
                 x => {
@@ -156,6 +157,7 @@ impl ObjLoader{
         let mut face = Vec::new();
         let mut face_text = None; 
         let mut face_normal = None;
+
         let mut amount = 0;
         for face_part in line{
             amount += 1;
@@ -167,6 +169,8 @@ impl ObjLoader{
             let v_index: usize = if let Ok(v) = v_index_str.parse(){v} else {warn!("could not parse vertex face");return false;};
             let t_index: Result<usize,_> = t_index_str.parse();
             let n_index: Result<usize,_> = n_index_str.parse();
+
+            face.push(v_index);
 
             if let Ok(x) = t_index{
                 if let None = face_text{
@@ -206,7 +210,9 @@ impl ObjLoader{
     }
 
     fn to_mesh(mut object: ObjObject) -> Mesh{
-        let index = Self::triangulate(&mut object);
+        let mut index = Self::triangulate(&mut object);
+
+        Self::process_indecies(&mut index);
 
         let vertecies = Self::unwrap_indecies(&index,&object);
 
@@ -215,12 +221,13 @@ impl ObjLoader{
             normals: vertecies.normals,
             texture_coords: vertecies.tex_coords,
             indecies: index.vertex,
-            material: None,
+            material: Assets::get_material(&"default".to_string())
         }
     }
 
     /// Remove faces with more than 3 vertecies.
     fn triangulate(object:&ObjObject) -> Indecies{
+        trace!("Obj: triangulating");
         let mut vertex = Vec::with_capacity(object.faces.len() * 3);
         let mut texture = None;
         let mut normals = Vec::with_capacity(object.normal_faces.as_ref().unwrap().len() * 3);
@@ -271,12 +278,31 @@ impl ObjLoader{
 
     }
 
-    /// 12/23/22
+    /// Subtrace 1 from all indecies.
+    /// Obj format is 1 indexed so we need to confert it.
+    fn process_indecies(indecies: &mut Indecies){
+        trace!("Obj: processing indecies");
+        for i in 0..indecies.vertex.len(){
+            indecies.vertex[i] -= 1;
+        }
+
+        for i in 0..indecies.normals.len(){
+            indecies.normals[i] -= 1;
+        }
+
+        if let Some(ref mut x) = indecies.texture.as_mut(){
+            for i in 0..x.len(){
+                x[i] -= 1;
+            }
+        }
+
+    }
 
     /// Make mesh adressable by a single index.
     ///
     /// TODO: Current implementation removes flat shading. Fix that.
     fn unwrap_indecies(indecies: &Indecies,object: &ObjObject) -> Vertecies{
+        trace!("Obj: unwrap indecies");
         let length = indecies.vertex.len();
 
         let mut normals = Vec::with_capacity(length);

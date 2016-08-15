@@ -34,7 +34,7 @@ fn unload_command<T: Terminal>(args: &[&str], term: &mut T){
                 term.write("missing arguments: unload [TYPE] [NAME]".to_string());
                 return;
             }
-            Assets::unload_mesh(args[1].to_string());
+            Assets::unload_mesh(&args[1].to_string());
             term.write("mesh unloaded".to_string());
         }
         _ => term.write(format!("Wrong type: {} != [mesh]",args[0])),

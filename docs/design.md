@@ -22,6 +22,11 @@ It will document overal engine layout and design principals.
 
 ## Multithreading
 
+Tungste will heavely make use of the task-rs framework for multithread. Allowing jobs to 
+be executed in parallel while incurring as small a cost as nessesary.
+
+### Old
+
 Tungsten will use job/task-based multithreading. The idea is to have root be an immutable
 data structure task can use to grab data. Systems schedule the jobs and deal with 
 syncronisation. The task them-selfs are pieces of work which can be independenently 

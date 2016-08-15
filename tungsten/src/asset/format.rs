@@ -8,7 +8,7 @@ pub struct Mesh{
     pub normals: Vec<[f32; 3]>,
     pub texture_coords: Option<Vec<[f32; 2]>>,
     pub indecies: Vec<usize>,
-    pub material: Option<Container<Material>>,
+    pub material: Container<Material>,
 }
 
 pub struct Material{
@@ -42,7 +42,7 @@ impl Default for Mesh{
             normals: normals,
             indecies: SPHERE_INDECIES.to_vec(),
             texture_coords: None,
-            material: Some(Container::new(Default::default())),
+            material: Container::new(Default::default()),
         }
     }
 }
