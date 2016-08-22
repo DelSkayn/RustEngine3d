@@ -24,7 +24,8 @@ extern crate toml;
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
-
+#[macro_use]
+extern crate glium;
 
 pub mod engine;
 pub mod registery;

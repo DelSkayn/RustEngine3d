@@ -2,6 +2,10 @@ mod vulkan;
 mod ogl;
 mod format;
 
+extern crate nalgebra;
+
+use self::nalgebra::{Perspective3,UnitQuaternion,Vector3};
+
 pub use self::format::*;
 
 use self::vulkan::Vulkan;
@@ -18,7 +22,8 @@ pub enum Error{
     Other(&'static str),
 }
 
-trait Renderer{
+
+trait Renderer: Send{
     fn render(&mut self,que: RenderQue);
 }
 
@@ -55,6 +60,11 @@ impl Render{
     pub fn render(&mut self){
         let render = RenderQue{
             static_mesh: Vec::new(),
+            camera: Camera{
+                perspective: Perspective3::new(800.0/600.0,2.0,0.1,1000.0),
+                rotation: UnitQuaternion::new(Vector3::new(0.0,0.0,1.0)),
+                translation: Vector3::new(0.0,0.0,0.0),
+            }
         };
         self.renderer.render(render);
     }

@@ -9,9 +9,9 @@ struct ObjObject{
     pub vertecies: Vec<[f32; 3]>,
     pub tex_coords: Vec<[f32; 2]>,
     pub normals: Vec<[f32; 3]>,
-    pub faces: Vec<Vec<usize>>,
-    pub normal_faces: Option<Vec<Vec<usize>>>, 
-    pub texture_faces: Option<Vec<Vec<usize>>>, 
+    pub faces: Vec<Vec<u32>>,
+    pub normal_faces: Option<Vec<Vec<u32>>>, 
+    pub texture_faces: Option<Vec<Vec<u32>>>, 
 }
 
 struct Vertecies{
@@ -20,9 +20,9 @@ struct Vertecies{
 }
 
 struct Indecies{
-    vertex: Vec<usize>,
-    normals: Vec<usize>,
-    texture: Option<Vec<usize>>,
+    vertex: Vec<u32>,
+    normals: Vec<u32>,
+    texture: Option<Vec<u32>>,
 }
 
 impl ObjLoader{
@@ -82,7 +82,7 @@ impl ObjLoader{
                 "vn" => return Self::parse_normal(white,object),
                 "vt" => return Self::parse_text_coord(white,object),
                 "o" => return Self::parse_name(white,object),
-                x => {
+                _ => {
                     //warn!("Unkown identifier \"{}\" in obj file: TODO make error once properly implemented",x); 
                     return true;
                 },
@@ -153,7 +153,7 @@ impl ObjLoader{
         return true;
     }
 
-    fn parse_face<'a,I: Iterator<Item = &'a str>>(mut line: I,object: &mut ObjObject) -> bool{
+    fn parse_face<'a,I: Iterator<Item = &'a str>>(line: I,object: &mut ObjObject) -> bool{
         let mut face = Vec::new();
         let mut face_text = None; 
         let mut face_normal = None;
@@ -166,9 +166,9 @@ impl ObjLoader{
             let t_index_str = if let Some(v) = index.next(){v} else {warn!("missing index!");return false;};
             let n_index_str = if let Some(v) = index.next(){v} else {warn!("missing index!");return false;};
 
-            let v_index: usize = if let Ok(v) = v_index_str.parse(){v} else {warn!("could not parse vertex face");return false;};
-            let t_index: Result<usize,_> = t_index_str.parse();
-            let n_index: Result<usize,_> = n_index_str.parse();
+            let v_index: u32 = if let Ok(v) = v_index_str.parse(){v} else {warn!("could not parse vertex face");return false;};
+            let t_index: Result<u32,_> = t_index_str.parse();
+            let n_index: Result<u32,_> = n_index_str.parse();
 
             face.push(v_index);
 
@@ -310,7 +310,7 @@ impl ObjLoader{
         unsafe{normals.set_len(length)};
         let borrow = &indecies.normals;
         for i in 0..length{
-            normals[indecies.vertex[i]] = object.normals[borrow[i]];
+            normals[indecies.vertex[i] as usize] = object.normals[borrow[i] as usize];
         }
 
 
@@ -323,7 +323,7 @@ impl ObjLoader{
             let borrow = indecies.texture.as_ref().unwrap();
 
             for i in 0..length{
-                res[indecies.vertex[i]] = object.tex_coords[borrow[i]];
+                res[indecies.vertex[i] as usize] = object.tex_coords[borrow[i] as usize];
             }
 
             tex_coords = Some(res);

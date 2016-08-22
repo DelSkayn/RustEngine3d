@@ -1,10 +1,12 @@
 /// module containing the implentation of the stream.
 
 extern crate crossbeam;
+use self::crossbeam::sync::MsQueue;
+
+extern crate task;
+use task::DynamicPromise;
 
 use super::super::util::FnBox;
-
-use self::crossbeam::sync::MsQueue;
 
 use std::thread::JoinHandle;
 use std::sync::mpsc::Sender;
@@ -22,6 +24,7 @@ use std::io::Read;
 use std::io::Seek;
 
 use std::thread;
+use std::time::Duration;
 
 
 lazy_static!{ static ref STREAM: Stream = Stream::new(); }
@@ -52,7 +55,7 @@ pub struct Stream{
 impl Drop for Stream{
     fn drop(&mut self){
         self.que.push(Command::Stop);
-        self.join.take().unwrap().join().expect("Stream thread ended premeturly");
+        self.join.take().unwrap().join().expect("Stream thread ended prematurely");
     }
 }
 
@@ -69,6 +72,11 @@ impl Stream{
 
     pub fn que(com: Command){
         STREAM.que.push(com);
+        Self::wake();
+    }
+
+    pub fn wake(){
+        STREAM.join.as_ref().unwrap().thread().unpark();
     }
 }
 
@@ -78,8 +86,18 @@ fn run(que: Arc<MsQueue<Command>>){
     let mut open_files = HashMap::new();
     // TODO impl for wrapping integer.
     let mut next = 0usize;
+    let mut pending = Vec::new();
     loop{
-        let res = que.pop();
+        let res;
+        loop{
+            pending.retain(|prom: &DynamicPromise<()>| !prom.done());
+            if let Some(que) = que.try_pop(){
+                res = que;
+                break;
+            }else{
+                thread::park_timeout(Duration::from_millis(10));
+            }
+        }
         trace!("Recieved io event");
         match res { 
             Command::Open(path,sender) => {
@@ -154,10 +172,20 @@ fn run(que: Arc<MsQueue<Command>>){
                     .read(&mut buf);
                 match res{
                     Ok(_) => {
-                        callback.call_box(Ok(buf));
+                        let promise = DynamicPromise::new(|| {
+                            callback.call_box(Ok(buf));
+                            Stream::wake();
+                        });
+                        promise.run();
+                        pending.push(promise);
                     },
                     Err(x) => {
-                        callback.call_box(Err(x));
+                        let promise = DynamicPromise::new(|| {
+                            callback.call_box(Err(x));
+                            Stream::wake();
+                        });
+                        promise.run();
+                        pending.push(promise);
                     }
                 }
             },
@@ -169,10 +197,20 @@ fn run(que: Arc<MsQueue<Command>>){
                     .read_to_end(&mut buf);
                 match res{
                     Ok(_) => {
-                        callback.call_box(Ok(buf));
+                        let promise = DynamicPromise::new(|| {
+                            callback.call_box(Ok(buf));
+                            Stream::wake();
+                        });
+                        promise.run();
+                        pending.push(promise);
                     },
                     Err(x) => {
-                        callback.call_box(Err(x));
+                        let promise = DynamicPromise::new(|| {
+                            callback.call_box(Err(x));
+                            Stream::wake();
+                        });
+                        promise.run();
+                        pending.push(promise);
                     }
                 }
             },

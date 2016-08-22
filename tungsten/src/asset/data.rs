@@ -233,7 +233,7 @@ pub static SPHERE_NORMALS: [f32; 342] = [
                 -8.8501998e-18,-1.00000000,-6.2393909e-17,
             ];
 
-pub static SPHERE_INDECIES: [usize; 672] = [
+pub static SPHERE_INDECIES: [u32; 672] = [
                 1,18,17,
                 1,32,16,
                 1,113,2,

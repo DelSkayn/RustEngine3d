@@ -18,6 +18,8 @@ use registery::Registery;
 pub use super::{Error,WindowContext,RenderQue};
 use super::Renderer;
 
+unsafe impl Send for Vulkan{}
+
 pub struct Vulkan{
     instance: Arc<Instance>,
     device: Device,

@@ -5,17 +5,17 @@ use util::Logger;
 use console::{Console, SystemTerminal};
 use render::Render;
 use Game;
-use task;
+use task::Promise;
 
 
 const BANNER: &'static str = r#"
-  ______                                        __                       
- /\__  _\                                      /\ \__                    
- \/_/\ \/   __  __    ___       __       ____  \ \ ,_\     __     ___    
-    \ \ \  /\ \/\ \ /' _ `\   /'_ `\    /',__\  \ \ \/   /'__`\ /' _ `\  
-     \ \ \ \ \ \_\ \/\ \/\ \ /\ \L\ \  /\__, `\  \ \ \_ /\  __/ /\ \/\ \ 
-      \ \_\ \ \____/\ \_\ \_\\ \____ \ \/\____/   \ \__\\ \____\\ \_\ \_\
-       \/_/  \/___/  \/_/\/_/ \/___L\ \ \/___/     \/__/ \/____/ \/_/\/_/
+  ______                                      __                       
+ /\__  _\                                    /\ \__                    
+ \/_/\ \/   __  __    ___       __      ____\ \ ,_\     __     ___    
+    \ \ \  /\ \/\ \ /' _ `\   /'_ `\   /',__\\ \ \/   /'__`\ /' _ `\  
+     \ \ \ \ \ \_\ \/\ \/\ \ /\ \L\ \ /\__, `\\ \ \_ /\  __/ /\ \/\ \ 
+      \ \_\ \ \____/\ \_\ \_\\ \____ \\/\____/ \ \__\\ \____\\ \_\ \_\
+       \/_/  \/___/  \/_/\/_/ \/___L\ \\/___/   \/__/ \/____/ \/_/\/_/
                                 /\____/                                  
                                 \_/__/                                   
 "#;
@@ -57,8 +57,14 @@ impl<G: Game + Send> Engine<G> {
         while State::running(){
             let window = &mut self.window;
             let console = &mut self.console;
-            task::join(|| window.update(), || console.update());
-            self.render.render();
+            let render = &mut self.render;
+            let win = Promise::new(|| window.update());
+            let con = Promise::new(|| console.update());
+            win.run();
+            con.run();
+            // Gl does not allow rendering on a separate thread.
+            // We need to make a sollution for this.
+            render.render()
         }
     }
 }

@@ -4,9 +4,12 @@ use self::crossbeam::mem::epoch::{self,Owned,Atomic};
 use std::sync::atomic::{Ordering,AtomicUsize};
 use std::sync::Arc;
 
+use super::metadata::Container as MetaDataContainer;
+
 struct ContainerData<T>{
     data: Atomic<T>,
     changed: AtomicUsize,
+    meta: MetaDataContainer,
 }
 
 pub struct Container<T>{
@@ -31,6 +34,7 @@ impl<T> Container<T>{
         let d = ContainerData{
             data: Atomic::null(),
             changed: AtomicUsize::new(0),
+            meta: MetaDataContainer::new(),
         };
         d.data.store(Some(Owned::new(data))
                      ,Ordering::Release);
@@ -46,6 +50,7 @@ impl<T> Container<T>{
               ContainerData{
                   data: Atomic::null(),
                   changed: AtomicUsize::new(0),
+                  meta: MetaDataContainer::new(),
               }),
             changed: 0,
         }
@@ -58,6 +63,10 @@ impl<T> Container<T>{
         self.data.changed.fetch_add(1,Ordering::AcqRel);
     }
 
+    pub fn meta(&self) -> &MetaDataContainer{
+        &self.data.meta
+    }
+
     pub fn changed(&self) -> bool{
         self.changed == self.data.changed.load(Ordering::Acquire)
     }
@@ -66,9 +75,9 @@ impl<T> Container<T>{
         self.data.data.cas(None,None,Ordering::AcqRel).is_err()
     }
 
-    pub fn borrow<F>(&self,func: F)
-        where F: FnOnce(&T)
+    pub fn use_data<F,R>(&self,func: F) -> R
+        where F: FnOnce(&T) -> R
         {
-            func(*self.data.data.load(Ordering::Acquire,&epoch::pin()).unwrap());
+            func(*self.data.data.load(Ordering::Acquire,&epoch::pin()).unwrap())
         }
 }

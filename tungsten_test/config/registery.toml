@@ -1,7 +1,7 @@
 [window]
 size = [800,600]
 position = [0,0]
-vsync = true
+vsync = false
 title = "tungsten test project"
 
 [general]

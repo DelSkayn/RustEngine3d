@@ -91,7 +91,7 @@ impl<'a> Schedular<'a>{
                         task::steal();
                     }
             }));
-            task::push_unchecked_global(temp.as_ref().unwrap());
+            task::push_global(temp.as_ref().unwrap());
             temp
         };
         res

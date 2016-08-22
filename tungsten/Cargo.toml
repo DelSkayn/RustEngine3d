@@ -12,6 +12,7 @@ crossbeam = "*"
 lazy_static = "*"
 toml = "*"
 libc = "*"
+nalgebra = "*"
 
 [dependencies.task]
 path = "../../task-rs"

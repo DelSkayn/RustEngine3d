@@ -4,23 +4,24 @@ use self::crossbeam::sync::MsQueue;
 
 use std::collections::HashMap;
 use std::sync::RwLock;
-use std::path::{Path,PathBuf};
-
+use std::path::{Path};
 
 mod asset_container;
 pub use self::asset_container::*;
 
 mod data;
-
 mod mesh;
 use self::mesh::{MeshFileTypes,MeshLoader};
 
 mod format;
 pub use self::format::*;
 
+pub mod metadata;
+
 pub use super::io::{File,CallbackResult};
 
 lazy_static!(static ref ASSETS: RwLock<Assets> = RwLock::new(Assets::new()););
+
 
 #[derive(Debug)]
 pub enum Error{

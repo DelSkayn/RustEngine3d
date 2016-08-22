@@ -7,7 +7,7 @@ pub struct Mesh{
     pub vertecies: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub texture_coords: Option<Vec<[f32; 2]>>,
-    pub indecies: Vec<usize>,
+    pub indecies: Vec<u32>,
     pub material: Container<Material>,
 }
 

@@ -21,7 +21,7 @@ use self::commands::*;
 
 use std::collections::HashMap;
 
-use std::process::{Stdio,Command as StdCommand};
+use std::process::{Command as StdCommand};
 
 use std::str;
 
