@@ -51,6 +51,9 @@ impl<T: Terminal> Console<T> {
             t.write("quiting!".to_string());
             State::quit();
         });
+        c.add_command("panic".to_string(), |_,_|{
+            panic!();
+        });
         c.add_command("asset".to_string(),asset_command);
         c.add_command("!".to_string(),|args,t|{
             if args.len() < 1{

@@ -2,16 +2,15 @@ extern crate glium;
 
 use self::glium::backend::{Context,Backend};
 use self::glium::debug::{DebugCallbackBehavior,Severity};
-use self::glium::{Frame,Surface,VertexBuffer,IndexBuffer};
+use self::glium::{Frame,Surface};
 
 use super::{Renderer,Error,WindowContext};
 pub use super::RenderQue;
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 mod format;
-use self::format::*;
+pub use self::format::*;
 
 // Eh might cause problems with opengl context.
 unsafe impl Send for Ogl{}
@@ -24,7 +23,7 @@ pub struct Ogl{
 }
 
 impl Renderer for Ogl{
-    fn render(&mut self, que: RenderQue){
+    fn render(&mut self, _: RenderQue){
         let mut frame = Frame::new(self.context.clone(),self.dimension);
         frame.clear_color(0.0,0.0,self.temp,1.0);
         frame.finish().unwrap();

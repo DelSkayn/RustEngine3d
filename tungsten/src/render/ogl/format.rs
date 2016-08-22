@@ -8,8 +8,6 @@ use super::glium::buffer::BufferCreationError;
 use super::glium::vertex::BufferCreationError as VertexBufCreationError;
 use super::glium::index::{PrimitiveType, BufferCreationError as IndexBufCreationError};
 
-use std::iter::Fuse;
-
 use std::rc::Rc;
 
 use asset::Mesh;

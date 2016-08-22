@@ -139,7 +139,7 @@ impl Assets{
         }
     }
 
-    pub fn load_material<S>(name: String, path: S) where S: AsRef<Path>{
+    pub fn load_material<S>(_name: String, _path: S) where S: AsRef<Path>{
         unimplemented!();
     }
 
