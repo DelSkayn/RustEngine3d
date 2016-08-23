@@ -13,8 +13,6 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use std::path::PathBuf;
-
 use std::fs::File;
 
 use std::io::SeekFrom;
@@ -41,8 +39,7 @@ pub enum Command{
     ReadFullyCallback(FileId,Box<FnBox<Result<Vec<u8>>,Output = ()> + Send>),
     Write(Vec<u8>,FileId,Sender<Result<()>>),
     Seek(SeekFrom,FileId,Sender<Result<()>>),
-    Open(PathBuf,Sender<Result<FileId>>),
-    Create(PathBuf,Sender<Result<FileId>>),
+    Open(File,Sender<FileId>),
     Close(FileId),
     Stop,
 }
@@ -100,33 +97,11 @@ fn run(que: Arc<MsQueue<Command>>){
         }
         trace!("Recieved io event");
         match res { 
-            Command::Open(path,sender) => {
-                let file = File::open(path);
-                match file{
-                    Ok(x) => {
-                        let id = next;
-                        next +=1;
-                        open_files.insert(id,x);
-                        sender.send(Ok(FileId(id))).unwrap();
-                    },
-                    Err(e) => {
-                        sender.send(Err(e)).unwrap();
-                    }
-                }
-            },
-            Command::Create(path,sender) => {
-                let file = File::create(path);
-                match file{
-                    Ok(x) => {
-                        let id = next;
-                        next +=1;
-                        open_files.insert(id,x);
-                        sender.send(Ok(FileId(id))).unwrap();
-                    },
-                    Err(e) => {
-                        sender.send(Err(e)).unwrap();
-                    }
-                }
+            Command::Open(file,sender) => {
+                let id = next;
+                next +=1;
+                open_files.insert(id,file);
+                sender.send(FileId(id)).unwrap();
             },
             Command::Read(size,file_id,sender) => {
                 let FileId(id) = file_id;

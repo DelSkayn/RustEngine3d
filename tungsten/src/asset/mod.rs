@@ -87,10 +87,9 @@ impl Assets{
         let cont = Container::empty();
         Self::place_mesh(name,cont.clone());
         // create load job.
-        let mut file = File::open(&path);
-        let res = file.ready();
-        match res { 
-            Ok(_) => {
+        let file = File::open(&path);
+        match file{ 
+            Ok(mut file) => {
                 if let Some(x) = path.as_ref().extension(){
                     let borrow = ASSETS.read().expect("Asset lock poised");
                     if let Some(x) = MeshFileTypes::from_extension(x.to_str().unwrap()){
@@ -120,6 +119,7 @@ impl Assets{
                 x.data.clone()
             }
             None => {
+                debug!("Could not find asset returning default.");
                 borrow.meshes.get(&"default".to_string())
                     .as_ref().unwrap().data.clone()
             }
@@ -133,6 +133,7 @@ impl Assets{
                 x.data.clone()
             }
             None => {
+                debug!("Could not find asset returning default.");
                 borrow.materials.get(&"default".to_string())
                     .as_ref().unwrap().data.clone()
             }

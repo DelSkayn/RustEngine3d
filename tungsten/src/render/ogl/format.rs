@@ -33,12 +33,22 @@ pub struct Vertex{
     normals: [f32; 3],
 }
 
-pub struct StaticMeshNoTextureData{
-    pub transform: Matrix4<f32>,
-    pub mesh: StaticMeshNoTexture,
+struct CachedRenderQue{
+    static_no_text: Vec<StaticMeshNoTextureData>,
 }
 
-pub type StaticMeshNoTextureQue = Vec<StaticMeshNoTextureData>;
+pub struct Material{
+    roughness: f32,
+    metalness: f32,
+    spec_color: [f32; 3],
+    diffuse: [f32; 3],
+}
+
+pub struct StaticMeshNoTextureData{
+    pub transform: Matrix4<f32>,
+    pub material: Material,
+    pub mesh: StaticMeshNoTexture,
+}
 
 implement_vertex!(Vertex,position,normals);
 

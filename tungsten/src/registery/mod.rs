@@ -181,9 +181,9 @@ impl Registery {
     pub fn read_from_file() {
         let path = SETTINGS_FILE.read().unwrap().clone();
         info!("Reading config file at: {}",path.to_str().unwrap());
-        let mut file = File::open(&path);
-        if let Ok(_) = file.ready(){
-            let res = file.read_to_end().wait()
+        let file = File::open(&path);
+        if let Ok(mut x) = file{
+            let res = x.read_to_end().wait()
                 .map(|e| String::from_utf8(e).unwrap());
             match res {
                 Ok(x) => {

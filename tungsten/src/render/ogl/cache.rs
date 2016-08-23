@@ -28,11 +28,12 @@ impl Cache{
         context.meta.change(CacheMetaData(loaded_mesh));
     }
 
-    pub fn process(&mut self,context: Arc<Context>,que: RenderQue) -> StaticMeshNoTextureQue{
+    pub fn process(&mut self,context: Arc<Context>,que: RenderQue) -> CachedRenderQue{
         let res = Vec::with_capacity(que.len());
         for obj in que{
-            if que.
+            if !que.meta.is_owned(){
+                
+            }
         }
-        res
     }
 }

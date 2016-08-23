@@ -1,18 +1,15 @@
-mod vulkan;
-mod ogl;
+
 mod format;
-
-extern crate nalgebra;
-
-use self::nalgebra::{Perspective3,UnitQuaternion,Vector3};
-
 pub use self::format::*;
 
+mod vulkan;
 use self::vulkan::Vulkan;
+mod ogl;
 use self::ogl::Ogl;
 
-use registery::Registery;
+pub use registery::Registery;
 pub use window::WindowContext;
+
 
 #[derive(Debug)]
 pub enum Error{
@@ -22,9 +19,15 @@ pub enum Error{
     Other(&'static str),
 }
 
-
+/// Trait renderers must adhear to.
+///
 trait Renderer: Send{
+    /// render the que given.
     fn render(&mut self,que: RenderQue);
+
+    // Register a render object in the renderer.
+    // Possibly loading the mesh and caching data.
+    //fn register(&self,RenderObjectHandle);
 }
 
 pub struct Render{
@@ -57,15 +60,15 @@ impl Render{
         }
     }
 
+
     pub fn render(&mut self){
         let render = RenderQue{
-            static_mesh: Vec::new(),
-            camera: Camera{
-                perspective: Perspective3::new(800.0/600.0,2.0,0.1,1000.0),
-                rotation: UnitQuaternion::new(Vector3::new(0.0,0.0,1.0)),
-                translation: Vector3::new(0.0,0.0,0.0),
-            }
+            layers: vec![Layer{
+                camera: Default::default(),
+                static_mesh: Vec::new(),
+            }],
         };
         self.renderer.render(render);
     }
 }
+

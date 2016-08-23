@@ -25,12 +25,14 @@ use std::sync::mpsc::{Receiver,TryRecvError,self};
 use std::path::Path;
 pub use std::io::Result;
 
+use std::fs::File as sFile;
+
 /// Used for keeping track of the current state of the file.
 /// Because currently the file is also opened on the thread 
 /// we need to wait till the thread returned a open file.
 enum FileState{
     Ready(FileId),
-    Wait(Receiver<Result<FileId>>),
+    Wait(Receiver<FileId>),
 }
 
 impl FileState{
@@ -39,22 +41,11 @@ impl FileState{
         let id = match self{
             &mut FileState::Ready(ref x) => return x.clone(),
             &mut FileState::Wait(ref recv) => {
-                recv.recv().unwrap().unwrap()
+                recv.recv().unwrap()
             },
         };
         *self = FileState::Ready(id);
         id
-    }
-
-    fn wait(&mut self) -> Result<()>{
-        let id = match self{
-            &mut FileState::Wait(ref recv) => {
-                try!(recv.recv().unwrap())
-            },
-            _ => return Ok(()),
-        };
-        *self = FileState::Ready(id);
-        Ok(())
     }
 }
 
@@ -165,26 +156,20 @@ pub struct File(FileState);
 
 impl File{
     /// Open a file at path 
-    /// us ready to recieve posible errors.
-    pub fn open<P: AsRef<Path>>(path: &P) -> Self{
+    pub fn open<P: AsRef<Path>>(path: &P) -> Result<Self>{
         let (send,recv) = mpsc::channel();
-        Stream::que(Command::Open(path.as_ref().to_path_buf(),send));
-        File(FileState::Wait(recv))
+        let file = try!(sFile::open(path));
+        Stream::que(Command::Open(file,send));
+        Ok(File(FileState::Wait(recv)))
     }
 
-    /// Open a file at path, if it does not exist it will create it.
-    /// us ready to recieve posible errors.
-    pub fn create<P: AsRef<Path>>(path: &P) -> Self{
+    /// Open a file at path, if it does not exist it will create it
+    /// if it does exist it will truncate the file.
+    pub fn create<P: AsRef<Path>>(path: &P) -> Result<Self>{
         let (send,recv) = mpsc::channel();
-        Stream::que(Command::Create(path.as_ref().to_path_buf(),send));
-        File(FileState::Wait(recv))
-    }
-
-    /// Wait until the file is ready.
-    /// Returns posible errors.
-    /// It is advised to call ready before calling other functions.
-    pub fn ready(&mut self) -> Result<()>{
-        self.0.wait()
+        let file = try!(sFile::open(path));
+        Stream::que(Command::Open(file,send));
+        Ok(File(FileState::Wait(recv)))
     }
 
     /// Write data to the file.

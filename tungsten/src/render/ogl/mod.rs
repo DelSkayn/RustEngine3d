@@ -13,6 +13,7 @@ mod format;
 pub use self::format::*;
 
 // Eh might cause problems with opengl context.
+// It does cause problems need to stick it to a single thread.
 unsafe impl Send for Ogl{}
 
 pub struct Ogl{
@@ -23,18 +24,10 @@ pub struct Ogl{
 }
 
 impl Renderer for Ogl{
-    fn render(&mut self, _: RenderQue){
+    fn render(&mut self, que: RenderQue){
         let mut frame = Frame::new(self.context.clone(),self.dimension);
-        frame.clear_color(0.0,0.0,self.temp,1.0);
+        frame.clear_color(0.0,0.0,1.0,1.0);
         frame.finish().unwrap();
-        self.temp += if self.dec {0.01} else {-0.01};
-        if self.temp > 1.0{
-            self.temp = 1.0;
-            self.dec = false;
-        }else if self.temp < 0.0{
-            self.temp = 0.0;
-            self.dec = true;
-        }
     }
 }
 
