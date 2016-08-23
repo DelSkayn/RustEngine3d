@@ -1,3 +1,5 @@
+extern crate task;
+use task::sync::mutate_inspect::{self,Inspector,Mutator};
 
 mod format;
 pub use self::format::*;
@@ -19,11 +21,13 @@ pub enum Error{
     Other(&'static str),
 }
 
+type RenderObjects = Vec<Inspector<StaticRenderObject>>;
+
 /// Trait renderers must adhear to.
 ///
 trait Renderer: Send{
     /// render the que given.
-    fn render(&mut self,que: RenderQue);
+    fn render(&mut self,objects: RenderObjects);
 
     // Register a render object in the renderer.
     // Possibly loading the mesh and caching data.
@@ -32,10 +36,13 @@ trait Renderer: Send{
 
 pub struct Render{
     renderer: Box<Renderer>,
+    register_objects: Vec<Inspector<StaticRenderObject>>,
 }
 
 impl Render{
     pub fn new(window: WindowContext) -> Self{
+
+        // find renderer in register
         let renderer: Result<Box<Renderer>,Error> = match Registery::get("render.prefered").or("vulkan".to_string()).as_str(){
             "vulkan" => {
                 Vulkan::new(window.clone()).map(|x| Box::new(x) as Box<Renderer>)
@@ -48,6 +55,9 @@ impl Render{
                 Vulkan::new(window.clone()).map(|x| Box::new(x) as Box<Renderer>)
             }
         };
+
+        // test if render could init.
+        // If not try to fall back to ogl.
         let render = match renderer{
             Ok(x) => x,
             Err(e) =>{
@@ -55,20 +65,22 @@ impl Render{
                 Box::new(Ogl::new(window).expect("Could not initialize fallback renderer"))
             }
         };
+
         Render{
             renderer: render,
+            register_objects: Vec::new(),
         }
     }
 
+    pub fn render(&self){
+        unimplemented!();
+    }
 
-    pub fn render(&mut self){
-        let render = RenderQue{
-            layers: vec![Layer{
-                camera: Default::default(),
-                static_mesh: Vec::new(),
-            }],
-        };
-        self.renderer.render(render);
+    /// Register a render
+    pub fn register(&mut self, object: StaticRenderObject) -> Mutator<StaticRenderObject>{
+        let (mutate,inspect) = mutate_inspect::mutate_inspect(object);
+        self.register_objects.push(inspect);
+        mutate
     }
 }
 

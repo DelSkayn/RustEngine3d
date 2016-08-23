@@ -12,8 +12,9 @@
 //!
 //!     * Find a way so that you dont have to load the entire file.
 //!     * Do some api cleaning. the current implementation is very rough.
-//!     * Dont open files on a thread.
 //!
+
+extern crate task;
 
 mod stream;
 
@@ -41,7 +42,21 @@ impl FileState{
         let id = match self{
             &mut FileState::Ready(ref x) => return x.clone(),
             &mut FileState::Wait(ref recv) => {
-                recv.recv().unwrap()
+                let res;
+                loop{
+                    let try = recv.try_recv();
+                    match try{
+                        Ok(x) => {
+                            res = x;
+                            break;
+                        },
+                        Err(e) => match e{
+                            TryRecvError::Empty => task::steal(),
+                            TryRecvError::Disconnected => panic!("Stream channel closed prematerely."),
+                        }
+                    }
+                }
+                res
             },
         };
         *self = FileState::Ready(id);

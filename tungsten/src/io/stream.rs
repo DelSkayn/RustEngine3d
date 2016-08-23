@@ -77,7 +77,6 @@ impl Stream{
     }
 }
 
-//TODO push callbacks to work queue.
 /// Runs a thread.
 fn run(que: Arc<MsQueue<Command>>){
     let mut open_files = HashMap::new();

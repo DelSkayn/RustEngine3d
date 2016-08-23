@@ -5,7 +5,7 @@ use self::glium::debug::{DebugCallbackBehavior,Severity};
 use self::glium::{Frame,Surface};
 
 use super::{Renderer,Error,WindowContext};
-pub use super::RenderQue;
+use super::RenderObjects;
 
 use std::rc::Rc;
 
@@ -24,7 +24,7 @@ pub struct Ogl{
 }
 
 impl Renderer for Ogl{
-    fn render(&mut self, que: RenderQue){
+    fn render(&mut self, _: RenderObjects){
         let mut frame = Frame::new(self.context.clone(),self.dimension);
         frame.clear_color(0.0,0.0,1.0,1.0);
         frame.finish().unwrap();

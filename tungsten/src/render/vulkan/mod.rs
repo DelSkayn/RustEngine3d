@@ -4,7 +4,6 @@ mod swapchain;
 mod device;
 
 use self::swapchain::Swapchain;
-
 use self::device::Device;
 
 use self::vulkano::instance::{Instance,InstanceExtensions};
@@ -16,7 +15,7 @@ use std::sync::Arc;
 use registery::Registery;
 
 pub use super::{Error,WindowContext,RenderQue};
-use super::Renderer;
+use super::{Renderer,RenderObjects};
 
 unsafe impl Send for Vulkan{}
 
@@ -36,7 +35,7 @@ static LAYER_NAME_5: &'static str = "VK_LAYER_LUNARG_object_tracker";
 static LAYER_NAME_6: &'static str = "VK_LAYER_LUNARG_swapchain";
 
 impl Renderer for Vulkan{
-    fn render(&mut self,_: RenderQue){
+    fn render(&mut self,_: RenderObjects){
     }
 }
 
