@@ -3,5 +3,8 @@ name = "tungsten_test"
 version = "0.1.0"
 authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
+[dependencies]
+nalgebra = "*"
+
 [dependencies.tungsten]
 path = "../tungsten"

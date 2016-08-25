@@ -1,39 +1,59 @@
-use std::collections::HashMap;
 
-use asset::metadata::MetaData;
-use asset::Container;
-
-use super::{StaticMeshNoTexture,StaticMeshNoTextureQue,RenderQue,Context};
+use super::StaticMeshNoTexture;
+use super::glium::backend::Context;
+use super::super::RenderObjects;
+use super::super::Transform;
+use std::rc::Rc;
 
 pub struct CacheMetaData(StaticMeshNoTexture);
 
-impl MetaData for CacheMetaData{}
-
 pub struct Cache{
-    registered: Vec<Container<Mesh>>,
+    loaded_meshes: Vec<StaticMeshNoTexture>,
+    transforms: Vec<Transform>,
 }
 
 impl Cache{
     pub fn new() -> Self{
         Cache{
-            registered: Vec::new(),
+            loaded_meshes: Vec::new(),
+            transforms: Vec::new(),
         }
     }
 
-    pub fn load(&mut self,context: Arc<Context>,mesh: &Container<Mesh>){
-        let loaded_mesh = mesh.use_data(|mesh|{
-             Box::new(StaticMeshNoTexture::from_mesh(context,mesh).unwrap());
-        });
-        self.registered.push(mesh.clone());
-        context.meta.change(CacheMetaData(loaded_mesh));
+    pub fn load(&mut self,context: &Rc<Context>,que: &RenderObjects){
+        let len = que.len();
+        self.cache(context,que,len);
+        self.fetch(que,len);
     }
 
-    pub fn process(&mut self,context: Arc<Context>,que: RenderQue) -> CachedRenderQue{
-        let res = Vec::with_capacity(que.len());
-        for obj in que{
-            if !que.meta.is_owned(){
-                
+    fn fetch(&mut self,que: &RenderObjects,len: usize){
+        for i in 0..len{
+            if que[i].changed(){
+                let data = que[i].get();
+                self.transforms[i] = data.transform;
             }
         }
+    }
+
+    fn cache(&mut self,context: &Rc<Context>,que: &RenderObjects,len: usize){
+        if len > self.loaded_meshes.len(){
+            for i in self.loaded_meshes.len()..len{
+                let data = que[i].get();
+                let loaded_mesh = data.mesh.use_data(|mesh|{
+                    StaticMeshNoTexture::from_mesh(context.clone(),mesh).unwrap()
+                });
+                self.loaded_meshes.push(loaded_mesh);
+                println!("{:?}",data.transform);
+                self.transforms.push(data.transform);
+            }
+        }
+    }
+
+    pub fn mesh(&self,i: usize) -> &StaticMeshNoTexture{
+        &self.loaded_meshes[i]
+    }
+
+    pub fn transform(&self,i: usize) -> &Transform{
+        &self.transforms[i]
     }
 }

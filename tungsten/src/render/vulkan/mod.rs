@@ -35,7 +35,7 @@ static LAYER_NAME_5: &'static str = "VK_LAYER_LUNARG_object_tracker";
 static LAYER_NAME_6: &'static str = "VK_LAYER_LUNARG_swapchain";
 
 impl Renderer for Vulkan{
-    fn render(&mut self,_: RenderObjects){
+    fn render(&mut self,_: &RenderObjects){
     }
 }
 

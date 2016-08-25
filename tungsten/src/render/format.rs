@@ -1,12 +1,11 @@
 extern crate nalgebra;
-use self::nalgebra::{Perspective3,UnitQuaternion,Vector3,Matrix4};
-
+use self::nalgebra::{Perspective3,UnitQuaternion,Vector3,Matrix4,ToHomogeneous,Similarity3,Eye,BaseFloat,Rotation};
 use asset::{Container, Mesh};
 
 #[derive(Clone)]
 pub struct StaticRenderObject{
     pub mesh: Container<Mesh>,
-    pub transform: Matrix4<f32>,
+    pub transform: Transform,
 }
 
 pub struct Camera{
@@ -15,10 +14,39 @@ pub struct Camera{
     pub translation: Vector3<f32>,
 }
 
+impl Camera{
+    pub fn as_matrix(&self) -> Matrix4<f32>{
+        let mat = Similarity3::new(self.translation,self.rotation.rotation(),1.0)
+            .to_homogeneous();
+        mat * self.perspective.to_matrix()
+    }
+}
+
+#[derive(Clone,Debug)]
 pub struct Transform{
     pub rotation: UnitQuaternion<f32>,
     pub translation: Vector3<f32>,
-    pub scale: Vector3<f32>,
+    //pub scale: Vector3<f32>,
+}
+
+impl Transform{
+    pub fn as_matrix(&self) -> Matrix4<f32>{
+        Similarity3::new(self.translation,self.rotation.rotation(),1.0)
+            .to_homogeneous()
+    }
+
+    pub fn translate(&mut self,x: f32,y: f32, z: f32){
+        self.translation += Vector3::new(x,y,z);
+    }
+}
+
+impl Default for Transform{
+    fn default() -> Self{
+        Transform{
+            rotation: UnitQuaternion::new_with_euler_angles(0.0,0.0,0.0),
+            translation: Vector3::new(0.0,0.0,0.0),
+        }
+    }
 }
 
 pub struct RenderQue{

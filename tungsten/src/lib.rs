@@ -2,6 +2,8 @@
 #![crate_type = "lib"]
 #![allow(dead_code)]
 
+
+
 //! Tungsten game engines.
 //! ======================
 //!
@@ -34,14 +36,17 @@ pub mod util;
 pub mod console;
 pub mod render;
 pub mod state;
-
 pub mod asset;
 pub mod io;
 pub mod logic;
+pub use asset::{Assets,Container,Mesh};
+pub use render::Render;
 pub use engine::Engine;
 pub use registery::Registery;
 pub use state::State;
 
 pub trait Game {
     fn new() -> Self;
+
+    fn render(&mut self,_: &mut Render){}
 }

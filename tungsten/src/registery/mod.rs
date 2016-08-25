@@ -11,7 +11,7 @@
 //! ### TODO:
 //!
 //!     * Move running out of registry.
-//!     * Remove the `SETTINGS_FILE` var since the file can now only be used for loading.
+//!     * Remove the SETTINGS_FILE var since the file can now only be used for loading.
 //!     * Add a way to notify systems of setting changes.
 //!     * Add a way to split settings into multiple files in different locations.
 //!

@@ -7,7 +7,6 @@ use render::Render;
 use Game;
 use task::Promise;
 
-
 const BANNER: &'static str = r#"
     ______                                      __                       
    /\__  _\                                    /\ \__                    
@@ -62,6 +61,7 @@ impl<G: Game + Send> Engine<G> {
             let con = Promise::new(|| console.update());
             win.run();
             con.run();
+            self.game.render(render);
             // Gl does not allow rendering on a separate thread.
             // We need to make a sollution for this.
             render.render()

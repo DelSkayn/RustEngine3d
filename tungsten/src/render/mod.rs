@@ -1,5 +1,6 @@
 extern crate task;
-use task::sync::mutate_inspect::{self,Inspector,Mutator};
+pub use task::sync::mutate_inspect::{Inspector,Mutator};
+use task::sync::mutate_inspect;
 
 mod format;
 pub use self::format::*;
@@ -27,7 +28,7 @@ type RenderObjects = Vec<Inspector<StaticRenderObject>>;
 ///
 trait Renderer: Send{
     /// render the que given.
-    fn render(&mut self,objects: RenderObjects);
+    fn render(&mut self,objects: &RenderObjects);
 
     // Register a render object in the renderer.
     // Possibly loading the mesh and caching data.
@@ -72,13 +73,14 @@ impl Render{
         }
     }
 
-    pub fn render(&self){
-        unimplemented!();
+    pub fn render(&mut self){
+        self.renderer.render(&self.register_objects);
     }
 
     /// Register a render
     pub fn register(&mut self, object: StaticRenderObject) -> Mutator<StaticRenderObject>{
         let (mutate,inspect) = mutate_inspect::mutate_inspect(object);
+        println!("Registered!");
         self.register_objects.push(inspect);
         mutate
     }

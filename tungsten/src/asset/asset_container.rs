@@ -1,4 +1,5 @@
 extern crate crossbeam;
+extern crate task;
 
 use self::crossbeam::mem::epoch::{self,Owned,Atomic};
 use std::sync::atomic::{Ordering,AtomicUsize};
@@ -80,4 +81,10 @@ impl<T> Container<T>{
         {
             func(*self.data.data.load(Ordering::Acquire,&epoch::pin()).unwrap())
         }
+
+    pub fn wait(&self){
+        while !self.loaded(){
+            task::steal()
+        }
+    }
 }
