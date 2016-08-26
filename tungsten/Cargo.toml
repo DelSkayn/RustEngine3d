@@ -4,22 +4,22 @@ version = "0.0.1"
 authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
-glutin = "*"
-glium = "*"
-log = "*" 
-time = "*"
-crossbeam = "*"
-lazy_static = "*"
-toml = "*"
-libc = "*"
-nalgebra = "*"
+log = "*"
+
+[dependencies.tungsten_core]
+path = "tungsten_core"
+
+[dependencies.tungsten_asset]
+path = "tungsten_asset"
+
+[dependencies.tungsten_render]
+path = "tungsten_render"
+
+[dependencies.tungsten_logic]
+path = "tungsten_logic"
 
 [dependencies.task]
-path = "../../task-rs"
-
-[dependencies.vulkano]
-path = "../../vulkano/vulkano"
-
+path = "../task-rs"
 
 [profile.dev]
 opt-level = 0

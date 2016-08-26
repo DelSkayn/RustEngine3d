@@ -12,7 +12,7 @@ use self::vulkano::instance::debug::{DebugCallback,MessageTypes};
 
 use std::sync::Arc;
 
-use registery::Registery;
+use super::tungsten_core::registery::Registery;
 
 pub use super::{Error,WindowContext,RenderQue};
 use super::{Renderer,RenderObjects};

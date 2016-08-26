@@ -1,0 +1,18 @@
+[package]
+name = "tungsten_core"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+log = "*"
+lazy_static = "*"
+time = "*"
+toml = "*"
+glutin = "*"
+glium = "*"
+crossbeam = "*"
+libc = "*"
+
+[dependencies.task]
+path = "../../task-rs"
+

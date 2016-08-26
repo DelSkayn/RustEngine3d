@@ -1,3 +1,10 @@
+#![crate_name = "tungsten_logic"]
+#![crate_type = "lib"]
+#![allow(dead_code)]
+
+#[macro_use]
+extern crate log;
+extern crate task;
 
 mod component;
 mod entities;

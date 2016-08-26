@@ -1,0 +1,19 @@
+[package]
+name = "tungsten_render"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+nalgebra = "*"
+vulkano = "*"
+glium = "*"
+log = "*"
+
+[dependencies.task]
+path = "../../task-rs"
+
+[dependencies.tungsten_core]
+path = "../tungsten_core"
+
+[dependencies.tungsten_asset]
+path = "../tungsten_asset"

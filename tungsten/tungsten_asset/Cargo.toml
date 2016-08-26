@@ -1,0 +1,16 @@
+[package]
+name = "tungsten_asset"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+crossbeam = "*"
+log = "*"
+lazy_static = "*"
+
+[dependencies.tungsten_core]
+path = "../tungsten_core"
+
+[dependencies.task]
+path = "../../task-rs"
+

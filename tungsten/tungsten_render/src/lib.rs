@@ -1,17 +1,29 @@
+#![crate_name = "tungsten_render"]
+#![crate_type = "lib"]
+#![allow(dead_code)]
+
 extern crate task;
-pub use task::sync::mutate_inspect::{Inspector,Mutator};
+extern crate tungsten_core;
+extern crate tungsten_asset;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate glium;
+
+use task::sync::mutate_inspect::{Inspector,Mutator};
 use task::sync::mutate_inspect;
 
-mod format;
-pub use self::format::*;
+pub use tungsten_core::registery::Registery;
+pub use tungsten_core::window::WindowContext;
 
+mod format;
 mod vulkan;
-use self::vulkan::Vulkan;
 mod ogl;
+
+pub use self::format::*;
+use self::vulkan::Vulkan;
 use self::ogl::Ogl;
 
-pub use registery::Registery;
-pub use window::WindowContext;
 
 
 #[derive(Debug)]
@@ -23,6 +35,7 @@ pub enum Error{
 }
 
 type RenderObjects = Vec<Inspector<StaticRenderObject>>;
+pub type RegisteredObject = Mutator<StaticRenderObject>;
 
 /// Trait renderers must adhear to.
 ///
@@ -30,6 +43,7 @@ trait Renderer: Send{
     /// render the que given.
     fn render(&mut self,objects: &RenderObjects);
 }
+
 
 pub struct Render{
     renderer: Box<Renderer>,
@@ -74,7 +88,7 @@ impl Render{
     }
 
     /// Register a render
-    pub fn register(&mut self, object: StaticRenderObject) -> Mutator<StaticRenderObject>{
+    pub fn register(&mut self, object: StaticRenderObject) -> RegisteredObject{
         let (mutate,inspect) = mutate_inspect::mutate_inspect(object);
         println!("Registered!");
         self.register_objects.push(inspect);

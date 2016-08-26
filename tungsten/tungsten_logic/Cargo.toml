@@ -1,0 +1,10 @@
+[package]
+name = "tungsten_logic"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]
+log = "*"
+
+[dependencies.task]
+path = "../../task-rs"

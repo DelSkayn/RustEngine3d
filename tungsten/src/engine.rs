@@ -1,10 +1,13 @@
-use registery::Registery;
-use state::State;
-use window::Window;
-use util::Logger;
-use console::{Console, SystemTerminal};
-use render::Render;
-use Game;
+use super::tungsten_core::registery::Registery;
+use super::tungsten_core::state::State;
+use super::tungsten_core::window::Window;
+use super::tungsten_core::util::Logger;
+use super::tungsten_core::console::{Console, SystemTerminal};
+
+use super::tungsten_render::Render;
+
+use super::Game;
+use super::commands;
 use task::Promise;
 
 const BANNER: &'static str = r#"
@@ -39,11 +42,12 @@ impl<G: Game + Send> Engine<G> {
 
         Logger::init().unwrap();
         Registery::read_from_file();
-        let console = Console::new(SystemTerminal::new());
+        let mut console = Console::new(SystemTerminal::new());
+        commands::add_commands(&mut console);
         let window = Window::from_registry();
-        let render = Render::new(window.get_context());
+        let mut render = Render::new(window.get_context());
         Engine {
-                game: G::new(),
+                game: G::new(&mut render,&mut console),
                 window: window,
                 console: console,
                 render: render,
@@ -61,7 +65,7 @@ impl<G: Game + Send> Engine<G> {
             let con = Promise::new(|| console.update());
             win.run();
             con.run();
-            self.game.render(render);
+            self.game.update();
             // Gl does not allow rendering on a separate thread.
             // We need to make a sollution for this.
             render.render()

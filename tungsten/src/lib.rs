@@ -1,52 +1,24 @@
-#![crate_name = "tungsten"]
-#![crate_type = "lib"]
-#![allow(dead_code)]
-
-
-
-//! Tungsten game engines.
-//! ======================
-//!
-//! Running the engine
-//! ------------------
-//!
-//! In order to run the engine call the to `Go()` functions. Use the `Game` trait to set the engine
-//! in a proper state.
-//!
-
-
-// extern crate serde;
-// extern crate serde_json;
-//
-extern crate time;
+extern crate tungsten_render;
+extern crate tungsten_core;
+extern crate tungsten_asset;
+extern crate tungsten_logic;
 extern crate task;
-extern crate toml;
 
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate glium;
+mod engine;
+pub use engine::*;
 
-pub mod engine;
-pub mod registery;
-pub mod window;
-pub mod util;
-pub mod console;
-pub mod render;
-pub mod state;
-pub mod asset;
-pub mod io;
-pub mod logic;
-pub use asset::{Assets,Container,Mesh};
-pub use render::Render;
-pub use engine::Engine;
-pub use registery::Registery;
-pub use state::State;
+pub mod commands;
 
-pub trait Game {
-    fn new() -> Self;
+pub use self::tungsten_render::*;
+pub use self::tungsten_core::*;
+pub use self::tungsten_asset::{Assets,Mesh,Texture,Material,Container};
+pub use self::tungsten_logic::*;
 
-    fn render(&mut self,_: &mut Render){}
+pub use self::tungsten_core::console::{Console,Terminal};
+
+pub trait Game{
+    fn new<T: Terminal>(render: &mut Render,console: &mut Console<T>) -> Self;
+
+    fn update(&mut self){}
 }
+

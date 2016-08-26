@@ -1,5 +1,4 @@
 
-
 use super::{Assets,Mesh,Container};
 
 pub struct ObjLoader;

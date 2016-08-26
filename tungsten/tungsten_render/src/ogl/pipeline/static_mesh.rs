@@ -30,7 +30,7 @@ impl PipeLine{
     }
 
     pub fn render(&self,que: &RenderObjects,cache: &Cache,frame: &mut Frame){
-        for (i,obj) in que.iter().enumerate(){
+        for (i,_) in que.iter().enumerate(){
             let mesh = cache.mesh(i);
             let draw_para = DrawParameters{
                 depth: Depth{

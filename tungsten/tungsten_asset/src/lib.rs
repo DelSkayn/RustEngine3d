@@ -1,28 +1,36 @@
+#![crate_type = "lib"]
+#![allow(dead_code)]
+
 extern crate crossbeam;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate lazy_static;
+extern crate tungsten_core;
 
 use self::crossbeam::sync::MsQueue;
+
+mod data;
+mod asset_container;
+mod format;
+mod mesh;
+mod metadata;
+
+pub use self::asset_container::Container;
+pub use self::format::{Texture,Material,Mesh};
+use self::mesh::{MeshFileTypes,MeshLoader};
 
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::path::{Path};
 
-mod asset_container;
-pub use self::asset_container::*;
 
-mod data;
-mod mesh;
-use self::mesh::{MeshFileTypes,MeshLoader};
-
-mod format;
-pub use self::format::*;
-
-pub mod metadata;
-
-pub use super::io::{File,CallbackResult};
+pub use tungsten_core::io::{File,CallbackResult};
 
 lazy_static!(static ref ASSETS: RwLock<Assets> = RwLock::new(Assets::new()););
 
 
+/// Error type which can be returned when loading assets
 #[derive(Debug)]
 pub enum Error{
     NoFileExtension,
@@ -34,11 +42,14 @@ pub enum AssetId{
     Texture(String),
     Material(String),
 } 
-pub struct AssetData<T> {
+
+struct AssetData<T> {
     name: String,
     data: Container<T>,
 }
 
+/// Asset struct 
+/// The struct must be used with static function.
 pub struct Assets{
     meshes: HashMap<String,AssetData<Mesh>>,
     textures: HashMap<String,AssetData<Texture>>,
@@ -79,7 +90,10 @@ impl Assets{
         }
     }
 
-    pub fn load_mesh<S>(name: String,path: S) where S: AsRef<Path>{
+    pub fn load_mesh<S,T>(name: T,path: S) 
+        where S: AsRef<Path>,
+              T: Into<String>{
+        let name = name.into();
         info!("Loading mesh \"{}\" at \"{}\".",name,path.as_ref().to_str().unwrap());
         if Self::conflicting_mesh(&name){
             return;

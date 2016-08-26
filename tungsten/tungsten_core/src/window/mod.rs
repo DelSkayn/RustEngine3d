@@ -65,11 +65,15 @@ unsafe impl Backend for WindowContext{
 #[cfg(unix)]
 impl WindowContext{
     pub fn get_window_ptr(&self) -> Option<*mut c_void>{
-        self.r.get_xlib_window()
+        unsafe{
+            mem::transmute(self.r.get_xlib_window())
+        }
     }
 
     pub fn get_display_ptr(&self) -> Option<*mut c_void>{
-        self.r.get_xlib_display()
+        unsafe{
+            mem::transmute(self.r.get_xlib_display())
+        }
     }
 }
 

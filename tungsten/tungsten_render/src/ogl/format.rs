@@ -8,9 +8,10 @@ use super::glium::buffer::BufferCreationError;
 use super::glium::vertex::BufferCreationError as VertexBufCreationError;
 use super::glium::index::{PrimitiveType, BufferCreationError as IndexBufCreationError};
 
+use super::super::tungsten_asset::Mesh;
+
 use std::rc::Rc;
 
-use asset::Mesh;
 
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 extern crate nalgebra;
-use self::nalgebra::{Perspective3,UnitQuaternion,Vector3,Matrix4,ToHomogeneous,Similarity3,Eye,BaseFloat,Rotation};
-use asset::{Container, Mesh};
+use self::nalgebra::{Perspective3,UnitQuaternion,Vector3,Matrix4,ToHomogeneous,Similarity3,Rotation};
+use super::tungsten_asset::{Container,Mesh};
 
 #[derive(Clone)]
 pub struct StaticRenderObject{
@@ -43,7 +43,7 @@ impl Transform{
 impl Default for Transform{
     fn default() -> Self{
         Transform{
-            rotation: UnitQuaternion::new_with_euler_angles(0.0,0.0,0.0),
+            rotation: UnitQuaternion::from_euler_angles(0.0,0.0,0.0),
             translation: Vector3::new(0.0,0.0,0.0),
         }
     }
@@ -62,7 +62,7 @@ impl Default for Camera{
     fn default() -> Self{
         Camera{
             perspective: Perspective3::new(800.0/600.0,2.0,0.1,1000.0),
-            rotation: UnitQuaternion::new(Vector3::new(0.0,0.0,1.0)),
+            rotation: UnitQuaternion::from_euler_angles(0.0,0.0,1.0),
             translation: Vector3::new(0.0,0.0,0.0),
         }
     }

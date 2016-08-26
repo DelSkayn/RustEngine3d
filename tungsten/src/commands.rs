@@ -1,7 +1,51 @@
 use super::Terminal;
-use asset::Assets;
+use super::Console;
+use super::Assets;
+use super::state::State;
 
-pub fn asset_command<T: Terminal>(args: &[&str],term: &mut T){
+use std::process::Command as StdCommand;
+
+
+pub fn add_commands<T: Terminal>(c: &mut Console<T>){
+    c.add_command("quit", |_, t| {
+        t.write("quiting!".to_string());
+        State::quit();
+    });
+    c.add_command("panic", |_,_|{
+        panic!();
+    });
+    c.add_command("asset",asset_command);
+    c.add_command("!",sys_command);
+}
+
+pub fn sys_command<T: Terminal>(args: &[&str],term: &mut T){
+    if args.len() < 1{
+        term.write("missing arguments!: ! \"command\"".to_string());
+        return
+    }
+    // TODO defer later
+    let mut comm = StdCommand::new(args[0]);
+    for i in 1..args.len(){
+        comm.arg(args[i]);
+    }
+    println!("{:?}",comm);
+
+    match comm.spawn(){
+        Ok(mut x) => 
+        {
+            match x.wait(){
+                Ok(_) => {},
+                Err(e) => term.write(format!("Process recieved error: {:?}",e)),
+            }
+        },
+        Err(e) => {
+            term.write(format!("Process could not execute: {:?}",e));
+        },
+
+    };
+}
+
+fn asset_command<T: Terminal>(args: &[&str],term: &mut T){
     if args.len() < 1 {
         term.write("missing arguments!: asset [[SUBCOMMAND]]".to_string());
         return;

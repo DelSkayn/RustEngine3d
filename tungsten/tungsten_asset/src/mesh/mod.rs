@@ -1,6 +1,7 @@
 
 
-pub use super::*;
+pub use super::format::Mesh;
+pub use super::{Container,Assets};
 
 mod obj;
 use self::obj::ObjLoader;

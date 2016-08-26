@@ -1,13 +1,8 @@
 
-use super::component::{
-    Components,
-    ComponentStorage,
-    ComponentStorageBorrowReadGuard,
-    ComponentStorageBorrowWriteGuard,
-};
-use super::get_once::GetOnce;
-
 use task::{self,DynTaskImpl,ArcLatch,Latch};
+
+use super::component::{Components,ComponentStorage,ComponentStorageBorrowReadGuard,ComponentStorageBorrowWriteGuard};
+use super::get_once::GetOnce;
 
 use std::mem;
 use std::marker::PhantomData;
