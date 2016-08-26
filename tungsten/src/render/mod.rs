@@ -29,10 +29,6 @@ type RenderObjects = Vec<Inspector<StaticRenderObject>>;
 trait Renderer: Send{
     /// render the que given.
     fn render(&mut self,objects: &RenderObjects);
-
-    // Register a render object in the renderer.
-    // Possibly loading the mesh and caching data.
-    //fn register(&self,RenderObjectHandle);
 }
 
 pub struct Render{

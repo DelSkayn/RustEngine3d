@@ -1,4 +1,3 @@
-
 use super::StaticMeshNoTexture;
 use super::glium::backend::Context;
 use super::super::RenderObjects;
@@ -22,11 +21,11 @@ impl Cache{
 
     pub fn load(&mut self,context: &Rc<Context>,que: &RenderObjects){
         let len = que.len();
-        self.cache(context,que,len);
-        self.fetch(que,len);
+        self.fetch(context,que,len);
+        self.cache(que,len);
     }
 
-    fn fetch(&mut self,que: &RenderObjects,len: usize){
+    fn cache(&mut self,que: &RenderObjects,len: usize){
         for i in 0..len{
             if que[i].changed(){
                 let data = que[i].get();
@@ -35,7 +34,7 @@ impl Cache{
         }
     }
 
-    fn cache(&mut self,context: &Rc<Context>,que: &RenderObjects,len: usize){
+    fn fetch(&mut self,context: &Rc<Context>,que: &RenderObjects,len: usize){
         if len > self.loaded_meshes.len(){
             for i in self.loaded_meshes.len()..len{
                 let data = que[i].get();
