@@ -3,7 +3,7 @@ use super::vulkano::instance::{Instance,PhysicalDevice,PhysicalDeviceType};
 use super::vulkano::device::{Device as DeviceExt,DeviceExtensions,Queue};
 use super::vulkano::swapchain::Surface;
 
-use super::Error;
+use super::super::Error;
 
 use std::sync::Arc;
 

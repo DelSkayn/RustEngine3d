@@ -220,7 +220,7 @@ impl ObjLoader{
             normals: vertecies.normals,
             texture_coords: vertecies.tex_coords,
             indecies: index.vertex,
-            material: Assets::get_material(&"default".to_string())
+            material: Assets::get_material(&"default".to_string()).data
         }
     }
 

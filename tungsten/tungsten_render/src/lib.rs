@@ -1,3 +1,17 @@
+//! This crate profides the rendering functionality of the tungsten game engine. The render crate
+//! profides functions for rendering on both opengl and vulkan. Where opengl is used as a fallback
+//! for vulkan.
+//!
+//! # A summary
+//!
+//! - The `Render` struct is the root struct and contains all the data the rendering engine needs
+//!   to render. 
+//!
+//! - In order to render the user needs to register a render object at the render engine. This
+//!   object can then be mutated as nessacary and will be read from by the render engine when it
+//!   needs the data.
+//!
+
 #![crate_name = "tungsten_render"]
 #![crate_type = "lib"]
 #![allow(dead_code)]
@@ -13,8 +27,8 @@ extern crate glium;
 use task::sync::mutate_inspect::{Inspector,Mutator};
 use task::sync::mutate_inspect;
 
-pub use tungsten_core::registery::Registery;
-pub use tungsten_core::window::WindowContext;
+use tungsten_core::registery::Registery;
+use tungsten_core::window::WindowContext;
 
 mod format;
 mod vulkan;

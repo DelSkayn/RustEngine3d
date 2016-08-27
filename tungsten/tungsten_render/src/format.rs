@@ -1,5 +1,8 @@
 extern crate nalgebra;
-use self::nalgebra::{Perspective3,UnitQuaternion,Vector3,Matrix4,ToHomogeneous,Similarity3,Rotation};
+
+use tungsten_core::format::Transform;
+
+use self::nalgebra::{Perspective3,Vector3,Matrix4,ToHomogeneous,Isometry3,Point3,Cast};
 use super::tungsten_asset::{Container,Mesh};
 
 #[derive(Clone)]
@@ -9,61 +12,26 @@ pub struct StaticRenderObject{
 }
 
 pub struct Camera{
-    pub perspective: Perspective3<f32>,
-    pub rotation: UnitQuaternion<f32>,
-    pub translation: Vector3<f32>,
+    pos: Point3<f64>,//f64 to preserve presision
+    look_at: Point3<f64>,
+    up: Vector3<f32>,
+    fov: f32,
+    near: f32,
+    far: f32,
 }
 
 impl Camera{
-    pub fn as_matrix(&self) -> Matrix4<f32>{
-        let mat = Similarity3::new(self.translation,self.rotation.rotation(),1.0)
-            .to_homogeneous();
-        mat * self.perspective.to_matrix()
-    }
-}
-
-#[derive(Clone,Debug)]
-pub struct Transform{
-    pub rotation: UnitQuaternion<f32>,
-    pub translation: Vector3<f32>,
-    //pub scale: Vector3<f32>,
-}
-
-impl Transform{
-    pub fn as_matrix(&self) -> Matrix4<f32>{
-        Similarity3::new(self.translation,self.rotation.rotation(),1.0)
-            .to_homogeneous()
+    pub fn as_transform_matrix(&self) -> Matrix4<f32>{
+        let pos = Cast::<Point3<f64>>::from(self.pos);
+        let look_at = Cast::<Point3<f64>>::from(self.look_at);
+        Isometry3::new_observer_frame(&pos,&look_at,&self.up).to_homogeneous()
     }
 
-    pub fn translate(&mut self,x: f32,y: f32, z: f32){
-        self.translation += Vector3::new(x,y,z);
+    pub fn as_perspective_matrix(&self,aspect: f32) -> Matrix4<f32>{
+        Perspective3::new(aspect,self.fov,self.near,self.far).to_matrix()
     }
-}
 
-impl Default for Transform{
-    fn default() -> Self{
-        Transform{
-            rotation: UnitQuaternion::from_euler_angles(0.0,0.0,0.0),
-            translation: Vector3::new(0.0,0.0,0.0),
-        }
-    }
-}
-
-pub struct RenderQue{
-    pub layers: Vec<Layer>,
-}
-
-pub struct Layer{
-    pub camera: Camera,
-    pub static_mesh: Vec<()>,
-}
-
-impl Default for Camera{
-    fn default() -> Self{
-        Camera{
-            perspective: Perspective3::new(800.0/600.0,2.0,0.1,1000.0),
-            rotation: UnitQuaternion::from_euler_angles(0.0,0.0,1.0),
-            translation: Vector3::new(0.0,0.0,0.0),
-        }
+    pub fn as_matrix(&self, aspect: f32) -> Matrix4<f32>{
+        self.as_transform_matrix() * self.as_perspective_matrix(aspect)
     }
 }

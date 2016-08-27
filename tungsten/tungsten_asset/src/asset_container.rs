@@ -13,6 +13,8 @@ struct ContainerData<T>{
     meta: MetaDataContainer,
 }
 
+/// Container for asset data,
+/// Asset data can be changed on the fly and read at any time.
 pub struct Container<T>{
     data: Arc<ContainerData<T>>,
     // Identifier used to determin if data
@@ -87,4 +89,5 @@ impl<T> Container<T>{
             task::steal()
         }
     }
+
 }

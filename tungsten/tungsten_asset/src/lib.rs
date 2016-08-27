@@ -15,20 +15,25 @@ mod asset_container;
 mod format;
 mod mesh;
 mod metadata;
+mod asset_map;
 
 pub use self::asset_container::Container;
 pub use self::format::{Texture,Material,Mesh};
 use self::mesh::{MeshFileTypes,MeshLoader};
+use self::asset_map::AssetMap;
 
-use std::collections::HashMap;
 use std::sync::RwLock;
 use std::path::{Path};
 
+use std::sync::atomic::{Ordering,AtomicUsize};
 
-pub use tungsten_core::io::{File,CallbackResult};
+use tungsten_core::io::{File,CallbackResult};
 
-lazy_static!(static ref ASSETS: RwLock<Assets> = RwLock::new(Assets::new()););
-
+lazy_static!{
+    static ref ASSETS: RwLock<Assets> = RwLock::new(Assets::new());
+    static ref ASSET_NEXT_ID: AtomicUsize = AtomicUsize::new(1);
+    static ref PENDING: MsQueue<CallbackResult<()>> = MsQueue::new();
+}
 
 /// Error type which can be returned when loading assets
 #[derive(Debug)]
@@ -37,48 +42,72 @@ pub enum Error{
     ExtensionUnknow,
 }
 
-pub enum AssetId{
-    Mesh(String),
-    Texture(String),
-    Material(String),
-} 
+#[derive(Clone,Copy,Eq,PartialEq,Hash)]
+pub struct AssetId(usize);
 
-struct AssetData<T> {
+pub struct AssetData<T> {
     name: String,
+    id: AssetId,
     data: Container<T>,
+}
+
+impl<T> AssetData<T>{
+    pub fn name(&self) -> &String{
+        &self.name
+    }
+
+    pub fn id(&self) -> &AssetId{
+        &self.id
+    }
+
+    pub fn data(&self) -> &Container<T>{
+        &self.data
+    }
+}
+
+impl<T> Clone for AssetData<T>{
+    fn clone(&self) -> Self{
+        AssetData{
+            name: self.name.clone(),
+            id: self.id.clone(),
+            data: self.data.clone(),
+        }
+    }
 }
 
 /// Asset struct 
 /// The struct must be used with static function.
 pub struct Assets{
-    meshes: HashMap<String,AssetData<Mesh>>,
-    textures: HashMap<String,AssetData<Texture>>,
-    materials: HashMap<String,AssetData<Material>>,
-    pending: MsQueue<CallbackResult<()>>,
+    meshes: AssetMap<Mesh>,
+    textures: AssetMap<Texture>,
+    materials: AssetMap<Material>,
 }
 
 impl Assets{
     fn new() -> Self{
         // Load defaults
-        let mut meshes = HashMap::new();
-        let mut textures = HashMap::new();
-        let mut materials = HashMap::new();
+        let mut meshes = AssetMap::new();
+        let mut textures = AssetMap::new();
+        let mut materials = AssetMap::new();
         let material: Material = Default::default();
         let mesh: Mesh = Default::default();
         let texture: Texture = Default::default();
 
-        textures.insert("default".to_string(),AssetData{
+        textures.insert(AssetData{
             name: "default".to_string(),
+            id: AssetId(0),
             data: Container::new(texture),
         });
 
-        meshes.insert("default".to_string(),AssetData{
+        meshes.insert(AssetData{
             name: "default".to_string(),
+            id: AssetId(0),
             data: Container::new(mesh),
         });
         
-        materials.insert("default".to_string(),AssetData{
+        materials.insert(AssetData{
             name: "default".to_string(),
+            id: AssetId(0),
             data: Container::new(material),
         });
 
@@ -86,13 +115,13 @@ impl Assets{
             textures: textures,
             meshes: meshes,
             materials: materials,
-            pending: MsQueue::new(),
         }
     }
 
     pub fn load_mesh<S,T>(name: T,path: S) 
         where S: AsRef<Path>,
               T: Into<String>{
+        Self::update_pending();
         let name = name.into();
         info!("Loading mesh \"{}\" at \"{}\".",name,path.as_ref().to_str().unwrap());
         if Self::conflicting_mesh(&name){
@@ -105,9 +134,8 @@ impl Assets{
         match file{ 
             Ok(mut file) => {
                 if let Some(x) = path.as_ref().extension(){
-                    let borrow = ASSETS.read().expect("Asset lock poised");
                     if let Some(x) = MeshFileTypes::from_extension(x.to_str().unwrap()){
-                        borrow.pending.push(file.read_to_end_callback(|data|{
+                        PENDING.push(file.read_to_end_callback(|data|{
                             MeshLoader::load(x,data,cont);
                         }));
                     }
@@ -120,36 +148,43 @@ impl Assets{
     }
 
     pub fn unload_mesh(name: &String){
-        match ASSETS.write().expect("Asset lock poised").meshes.remove(name){
+        Self::update_pending();
+        match ASSETS.write().expect("Asset lock poised").meshes.remove_name(name){
             Some(_) => {},
             None => warn!("Tried to remove asset which was not loaded."),
         }
     }
 
-    pub fn get_mesh(name: &String) -> Container<Mesh>{
+    pub fn get_mesh(name: &String) -> AssetData<Mesh>{
+        Self::update_pending();
         let borrow = ASSETS.read().expect("Assets lock poised");
-        match borrow.meshes.get(name){
+        match borrow.meshes.get_name(name){
             Some(x) => {
-                x.data.clone()
+                x.clone()
             }
             None => {
                 debug!("Could not find asset returning default.");
-                borrow.meshes.get(&"default".to_string())
-                    .as_ref().unwrap().data.clone()
+                borrow.meshes
+                      .get(AssetId(0))
+                      .unwrap()
+                      .clone()
             }
         }
     }
 
-    pub fn get_material(name: &String) -> Container<Material>{
+    pub fn get_material(name: &String) -> AssetData<Material>{
+        Self::update_pending();
         let borrow = ASSETS.read().expect("Assets lock poised");
-        match borrow.materials.get(name){
+        match borrow.materials.get_name(name){
             Some(x) => {
-                x.data.clone()
+                x.clone()
             }
             None => {
                 debug!("Could not find asset returning default.");
-                borrow.materials.get(&"default".to_string())
-                    .as_ref().unwrap().data.clone()
+                borrow.materials
+                      .get_name(&"default".to_string())
+                      .unwrap()
+                      .clone()
             }
         }
     }
@@ -162,7 +197,7 @@ impl Assets{
     /// ids or paths.
     fn conflicting_mesh(name: &String) -> bool{
         let borrow = ASSETS.read().expect("Asset lock poised");
-        if borrow.meshes.contains_key(name){
+        if borrow.meshes.contains_key_name(name){
             warn!("asset with name: \"{}\", already loaded",name);
             return true;
         }
@@ -173,13 +208,31 @@ impl Assets{
     fn place_mesh(name: String,data: Container<Mesh>){
         let res = AssetData{
             name: name.clone(),
+            id: AssetId(ASSET_NEXT_ID.fetch_add(1,Ordering::AcqRel)),
             data: data,
         };
         {
             let mut borrow = ASSETS.write().expect("Asset lock poised");
-            borrow.meshes.insert(name,res);
+            borrow.meshes.insert(res);
         }
     }
+
+    /// Update the pending callbacks.
+    /// Should prob move to a scheduled task when implemented.
+    fn update_pending(){
+        while let Some(mut x) = PENDING.try_pop(){
+            if let Some(r) = x.try(){
+                match r{
+                    Ok(_) => {},
+                    Err(_) => warn!("Asset had error during loading"),
+                }
+            }else{
+                PENDING.push(x);
+                break;
+            }
+        }
+    }
+
 
 }
 

@@ -13,8 +13,8 @@ use self::vulkano::instance::debug::{DebugCallback,MessageTypes};
 use std::sync::Arc;
 
 use super::tungsten_core::registery::Registery;
-
-pub use super::{Error,WindowContext,RenderQue};
+use super::tungsten_core::window::WindowContext;
+use super::Error;
 use super::{Renderer,RenderObjects};
 
 unsafe impl Send for Vulkan{}

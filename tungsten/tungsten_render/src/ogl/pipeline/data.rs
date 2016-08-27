@@ -3,7 +3,7 @@ pub static FRAGMENT_SHADER: &'static str = r#"
 #define M_PI 3.1415926535897932384626433832795
 
 uniform float reflectance = 0.2;
-uniform float roughness = 0.80;
+uniform float roughness = 0.20;
 uniform float metalness = 1.0;
 uniform vec3 spec_color = vec3(1.0,0.86,0.57);
 
@@ -59,7 +59,7 @@ uniform mat4 MVPMat;
 uniform mat4 MVMat;
 uniform mat4 PMat;
 
-uniform vec3 Ligpos = vec3(10,10.0,10.0);
+uniform vec3 Ligpos = vec3(10,50000.0,10.0);
 
 out VS_OUT{
     vec3 N;
@@ -72,10 +72,9 @@ void main()
 {
     vec4 P = MVMat * vec4(position,1.0);
     vs_out.N = mat3(MVMat) * normals;
-    vs_out.L = (MVMat * vec4(Ligpos,1.0) - P).xyz;
+    vs_out.L = (vec4(Ligpos,1.0) - P).xyz;
     vs_out.V = P.xyz * -1;
     vs_out.color = normalize(position) /9 ;
-
     gl_Position = MVPMat * vec4(position,1.0);
 }
 "#;

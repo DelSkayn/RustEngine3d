@@ -4,7 +4,9 @@ use self::glium::backend::{Context,Backend};
 use self::glium::debug::{DebugCallbackBehavior,Severity};
 use self::glium::{Frame,Surface};
 
-use super::{Renderer,Error,WindowContext};
+use super::tungsten_core::window::WindowContext;
+use super::Error;
+use super::Renderer;
 use super::RenderObjects;
 
 use std::rc::Rc;

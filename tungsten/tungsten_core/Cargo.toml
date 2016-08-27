@@ -12,6 +12,7 @@ glutin = "*"
 glium = "*"
 crossbeam = "*"
 libc = "*"
+nalgebra = "0.9.0"
 
 [dependencies.task]
 path = "../../task-rs"

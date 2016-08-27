@@ -1,11 +1,11 @@
-use super::Terminal;
-use super::Console;
-use super::Assets;
-use super::state::State;
+use super::core::console::Terminal;
+use super::core::console::Console;
+use super::asset::Assets;
+use super::core::state::State;
 
 use std::process::Command as StdCommand;
 
-
+// Ad
 pub fn add_commands<T: Terminal>(c: &mut Console<T>){
     c.add_command("quit", |_, t| {
         t.write("quiting!".to_string());

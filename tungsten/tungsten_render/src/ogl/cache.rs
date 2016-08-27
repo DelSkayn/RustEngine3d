@@ -1,7 +1,9 @@
-use super::StaticMeshNoTexture;
 use super::glium::backend::Context;
+use super::super::tungsten_core::format::Transform;
+
 use super::super::RenderObjects;
-use super::super::Transform;
+use super::StaticMeshNoTexture;
+
 use std::rc::Rc;
 
 pub struct CacheMetaData(StaticMeshNoTexture);

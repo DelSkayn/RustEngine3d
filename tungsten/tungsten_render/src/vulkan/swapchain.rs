@@ -4,7 +4,8 @@ use super::vulkano::image::swapchain::SwapchainImage;
 
 use std::sync::Arc;
 
-use super::{WindowContext,Error};
+use super::super::tungsten_core::window::WindowContext;
+use super::super::Error;
 use super::device::Device;
 
 pub struct Swapchain{

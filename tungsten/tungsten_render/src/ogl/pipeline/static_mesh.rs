@@ -40,9 +40,9 @@ impl PipeLine{
                 },
                 .. Default::default()
             };
-            let p = Perspective3::<f32>::new(800.0/600.0,2.0,0.1,1000.0).to_matrix();
+            let p = Perspective3::<f32>::new(800.0/600.0,1.5,0.1,1000.0).to_matrix();
             let v = Matrix4::<f32>::new_identity(4);
-            let m = cache.transform(i).as_matrix();
+            let m: Matrix4<f32> = Cast::from(cache.transform(i).as_matrix());
 
             let mv = (v * m).clone();
             let mvp =  p.clone() * v * m;
