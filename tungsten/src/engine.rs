@@ -8,7 +8,7 @@ use super::tungsten_render::Render;
 
 use super::Game;
 use super::commands;
-use task::Promise;
+use task::promise::Promise;
 
 const BANNER: &'static str = r#"
     ______                                      __                       
@@ -63,12 +63,13 @@ impl<G: Game + Send> Engine<G> {
             let render = &mut self.render;
             let win = Promise::new(|| window.update());
             let con = Promise::new(|| console.update());
+            let ren = Promise::new(|| render.render());
             win.run();
             con.run();
+            ren.run();
             self.game.update();
             // Gl does not allow rendering on a separate thread.
             // We need to make a sollution for this.
-            render.render()
         }
     }
 }

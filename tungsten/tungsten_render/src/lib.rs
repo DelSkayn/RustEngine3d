@@ -30,6 +30,8 @@ use task::sync::mutate_inspect;
 use tungsten_core::registery::Registery;
 use tungsten_core::window::WindowContext;
 
+use tungsten_asset::{AssetData,Mesh};
+
 mod format;
 mod vulkan;
 mod ogl;
@@ -48,7 +50,7 @@ pub enum Error{
     Other(&'static str),
 }
 
-type RenderObjects = Vec<Inspector<StaticRenderObject>>;
+type RenderObjects = Vec<RegisterData>;
 pub type RegisteredObject = Mutator<StaticRenderObject>;
 
 /// Trait renderers must adhear to.
@@ -58,10 +60,26 @@ trait Renderer: Send{
     fn render(&mut self,objects: &RenderObjects);
 }
 
+pub struct RegisterData{
+    object: Inspector<StaticRenderObject>,
+    mesh: AssetData<Mesh>
+}
+
+impl RegisterData{
+    pub fn object(&self) -> &Inspector<StaticRenderObject>{
+        &self.object
+    }
+
+    pub fn mesh(&self) -> &AssetData<Mesh>{
+        &self.mesh
+    }
+}
+
+
 
 pub struct Render{
     renderer: Box<Renderer>,
-    register_objects: Vec<Inspector<StaticRenderObject>>,
+    objects: Vec<RegisterData>,
 }
 
 impl Render{
@@ -93,19 +111,18 @@ impl Render{
 
         Render{
             renderer: render,
-            register_objects: Vec::new(),
+            objects: Vec::new(),
         }
     }
 
     pub fn render(&mut self){
-        self.renderer.render(&self.register_objects);
+        self.renderer.render(&self.objects);
     }
 
     /// Register a render
-    pub fn register(&mut self, object: StaticRenderObject) -> RegisteredObject{
+    pub fn register(&mut self, object: StaticRenderObject,mesh: AssetData<Mesh>) -> RegisteredObject{
         let (mutate,inspect) = mutate_inspect::mutate_inspect(object);
-        println!("Registered!");
-        self.register_objects.push(inspect);
+        self.objects.push(RegisterData{ mesh: mesh,object: inspect});
         mutate
     }
 }

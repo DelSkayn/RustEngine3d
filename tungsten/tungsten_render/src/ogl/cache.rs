@@ -3,21 +3,28 @@ use super::super::tungsten_core::format::Transform;
 
 use super::super::RenderObjects;
 use super::StaticMeshNoTexture;
+use super::super::tungsten_asset::AssetId;
 
 use std::rc::Rc;
+use std::collections::HashMap;
 
-pub struct CacheMetaData(StaticMeshNoTexture);
+pub struct CachedData{
+    pub transform: Transform,
+    pub mesh: Rc<StaticMeshNoTexture>,
+}
+
+pub type CachedRenderQue = Vec<CachedData>;
 
 pub struct Cache{
-    loaded_meshes: Vec<StaticMeshNoTexture>,
-    transforms: Vec<Transform>,
+    loaded_meshes: HashMap<AssetId,Rc<StaticMeshNoTexture>>,
+    que: CachedRenderQue,
 }
 
 impl Cache{
     pub fn new() -> Self{
         Cache{
-            loaded_meshes: Vec::new(),
-            transforms: Vec::new(),
+            loaded_meshes: HashMap::new(),
+            que: CachedRenderQue::new(),
         }
     }
 
@@ -29,32 +36,41 @@ impl Cache{
 
     fn cache(&mut self,que: &RenderObjects,len: usize){
         for i in 0..len{
-            if que[i].changed(){
-                let data = que[i].get();
-                self.transforms[i] = data.transform;
+            if que[i].object.changed(){
+                let data = que[i].object.get();
+                self.que[i].transform = data.transform;
             }
         }
     }
 
-    fn fetch(&mut self,context: &Rc<Context>,que: &RenderObjects,len: usize){
-        if len > self.loaded_meshes.len(){
-            for i in self.loaded_meshes.len()..len{
-                let data = que[i].get();
-                let loaded_mesh = data.mesh.use_data(|mesh|{
-                    StaticMeshNoTexture::from_mesh(context.clone(),mesh).unwrap()
+    fn fetch(&mut self,context: &Rc<Context>,new: &RenderObjects,len: usize){
+        // Cache new render objects
+        for i in self.que.len()..len{
+            let data = new[i].object.get();
+
+            // test if the mesh is already present.
+            if let Some(x) = self.loaded_meshes.get(new[i].mesh().id()){
+                self.que.push(CachedData{
+                    transform: data.transform,
+                    mesh: x.clone(),
                 });
-                self.loaded_meshes.push(loaded_mesh);
-                println!("{:?}",data.transform);
-                self.transforms.push(data.transform);
+                continue;
             }
+
+            // if not load.
+            let loaded_mesh = new[i].mesh().data().use_data(|mesh|{
+                StaticMeshNoTexture::from_mesh(context.clone(),mesh).unwrap()
+            });
+            let mesh = Rc::new(loaded_mesh);
+            self.loaded_meshes.insert(new[i].mesh().id().clone(),mesh.clone());
+            self.que.push(CachedData{
+                transform: data.transform,
+                mesh: mesh,
+            });
         }
     }
 
-    pub fn mesh(&self,i: usize) -> &StaticMeshNoTexture{
-        &self.loaded_meshes[i]
-    }
-
-    pub fn transform(&self,i: usize) -> &Transform{
-        &self.transforms[i]
+    pub fn que(&self) -> &CachedRenderQue{
+        &self.que
     }
 }

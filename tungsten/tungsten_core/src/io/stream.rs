@@ -4,7 +4,7 @@ extern crate crossbeam;
 use self::crossbeam::sync::MsQueue;
 
 extern crate task;
-use task::DynamicPromise;
+use task::promise::DynamicPromise;
 
 use super::super::util::FnBox;
 

@@ -5,6 +5,7 @@ authors = ["DelSkayn <mees.delzenne@gmail.com>"]
 
 [dependencies]
 nalgebra = "*"
+rand = "*"
 
 [dependencies.tungsten]
 path = "../tungsten"

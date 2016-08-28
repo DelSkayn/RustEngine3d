@@ -1,5 +1,5 @@
 
-use super::nalgebra::{UnitQuaternion,ToHomogeneous,Similarity3,Rotation,Isometry3};
+use super::nalgebra::{UnitQuaternion,ToHomogeneous,Rotation,Isometry3};
 use super::*;
 
 #[derive(Clone,Copy,Debug)]

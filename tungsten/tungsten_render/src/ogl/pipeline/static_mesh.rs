@@ -11,7 +11,6 @@ use super::super::glium::draw_parameters::{DrawParameters,Depth,DepthTest};
 use std::rc::Rc;
 
 use super::*;
-use super::super::super::RenderObjects;
 use super::super::cache::Cache;
 
 pub struct PipeLine{
@@ -29,9 +28,9 @@ impl PipeLine{
         }
     }
 
-    pub fn render(&self,que: &RenderObjects,cache: &Cache,frame: &mut Frame){
-        for (i,_) in que.iter().enumerate(){
-            let mesh = cache.mesh(i);
+    pub fn render(&self,cache: &Cache,frame: &mut Frame){
+        for object in cache.que().iter(){
+            let ref mesh = *object.mesh;
             let draw_para = DrawParameters{
                 depth: Depth{
                     test: DepthTest::IfLess,
@@ -42,7 +41,7 @@ impl PipeLine{
             };
             let p = Perspective3::<f32>::new(800.0/600.0,1.5,0.1,1000.0).to_matrix();
             let v = Matrix4::<f32>::new_identity(4);
-            let m: Matrix4<f32> = Cast::from(cache.transform(i).as_matrix());
+            let m: Matrix4<f32> = Cast::from(object.transform.as_matrix());
 
             let mv = (v * m).clone();
             let mvp =  p.clone() * v * m;

@@ -3,11 +3,9 @@ extern crate nalgebra;
 use tungsten_core::format::Transform;
 
 use self::nalgebra::{Perspective3,Vector3,Matrix4,ToHomogeneous,Isometry3,Point3,Cast};
-use super::tungsten_asset::{Container,Mesh};
 
-#[derive(Clone)]
+#[derive(Clone,Copy)]
 pub struct StaticRenderObject{
-    pub mesh: Container<Mesh>,
     pub transform: Transform,
 }
 
