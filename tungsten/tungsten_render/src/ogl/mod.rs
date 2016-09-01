@@ -5,6 +5,7 @@ use self::glium::debug::{DebugCallbackBehavior,Severity};
 use self::glium::{Frame,Surface};
 
 use super::task::specific::Specific;
+use super::task::ThreadId;
 
 use super::tungsten_core::window::WindowContext;
 use super::Error;
@@ -38,7 +39,7 @@ pub struct Ogl(OglDefered);
 impl Ogl{
     pub fn new(window: WindowContext) -> Result<Self,Error>{
         let defer = Specific::new(|| OglDefered::new(window));
-        defer.run(4);
+        defer.run(ThreadId::from_num(4));
         Ok(Ogl(try!(defer.get())))
     }
 }
@@ -46,7 +47,7 @@ impl Ogl{
 impl Renderer for Ogl{
     fn render(&mut self, que: &RenderObjects){
         let defer = Specific::new(|| self.0.render(que));
-        defer.run(4);
+        defer.run(ThreadId::from_num(4));
     }
 }
 

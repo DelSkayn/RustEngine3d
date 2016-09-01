@@ -16,6 +16,8 @@
 
 extern crate task;
 
+use self::task::worker;
+
 mod stream;
 
 use self::stream::{FileId,Stream,Command};
@@ -51,7 +53,7 @@ impl FileState{
                             break;
                         },
                         Err(e) => match e{
-                            TryRecvError::Empty => task::steal(),
+                            TryRecvError::Empty => {worker::work();},
                             TryRecvError::Disconnected => panic!("Stream channel closed prematerely."),
                         }
                     }

@@ -1,6 +1,8 @@
 extern crate crossbeam;
 extern crate task;
 
+use self::task::worker;
+
 use self::crossbeam::mem::epoch::{self,Owned,Atomic};
 use std::sync::atomic::{Ordering,AtomicUsize};
 use std::sync::Arc;
@@ -86,7 +88,7 @@ impl<T> Container<T>{
 
     pub fn wait(&self){
         while !self.loaded(){
-            task::steal()
+            worker::work();
         }
     }
 

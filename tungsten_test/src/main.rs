@@ -4,7 +4,7 @@ extern crate nalgebra;
 
 extern crate rand;
 
-use self::tungsten::task;
+use self::tungsten::task::{self,Config,config};
 use self::tungsten::Game;
 use self::tungsten::render::{Render,RegisteredObject,StaticRenderObject};
 use self::tungsten::asset::Assets;

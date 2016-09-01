@@ -9,6 +9,7 @@ use super::tungsten_render::Render;
 use super::Game;
 use super::commands;
 use task::promise::Promise;
+use super::task::{Config,config};
 
 const BANNER: &'static str = r#"
     ______                                      __                       
@@ -24,7 +25,7 @@ const BANNER: &'static str = r#"
 
 /// The engine object holds all the data neccesary for the engine.
 pub struct Engine<G: Game + Send> {
-    game: G,
+    game: G,debug_assertions
     window: Window,
     console: Console<SystemTerminal>,
     render: Render,
@@ -38,7 +39,6 @@ impl<G: Game + Send> Engine<G> {
         println!("\x1B[1;31m--------------------------------------------------------------------------\x1B[0m");
         println!("\x1B[1;31m{}\x1B[0m", BANNER);
         println!("\x1B[1;31m--------------------------- Engine Starting! -----------------------------\x1B[0m");
-
 
         Logger::init().unwrap();
         Registery::read_from_file();
@@ -68,8 +68,6 @@ impl<G: Game + Send> Engine<G> {
             con.run();
             ren.run();
             self.game.update();
-            // Gl does not allow rendering on a separate thread.
-            // We need to make a sollution for this.
         }
     }
 }

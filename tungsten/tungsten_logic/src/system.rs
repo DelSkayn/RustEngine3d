@@ -1,5 +1,6 @@
 
-use task::{self,DynTaskImpl,ArcLatch,Latch};
+use task::promise::DynamicPromise;
+use task::worker;
 
 use super::component::{Components,ComponentStorage,ComponentStorageBorrowReadGuard,ComponentStorageBorrowWriteGuard};
 use super::get_once::GetOnce;
@@ -20,15 +21,25 @@ pub struct Args{
 unsafe impl Send for Args{}
 
 impl Args{
-    pub fn borrow<'a,T: ComponentStorage>(&'a self) -> Option<ArgReadGaurd<'a,T>>{
+    pub fn borrow<'a,T: ComponentStorage>(&'a self) -> ArgReadGaurd<'a,T>{
         unsafe{
-            (*self.components).borrow::<T>()
+            loop{
+                if let Some(x) = (*self.components).borrow::<T>(){
+                    return x
+                }
+                worker::work();
+            }
         }
     }
 
-    pub fn borrow_mut<'a,T: ComponentStorage>(&'a self) -> Option<ArgWriteGaurd<'a,T>>{
+    pub fn borrow_mut<'a,T: ComponentStorage>(&'a self) -> ArgWriteGaurd<'a,T>{
         unsafe{
-            (*self.components).borrow_mut::<T>()
+            loop{
+                if let Some(x) = (*self.components).borrow_mut::<T>(){
+                    return x
+                }
+                worker::work();
+            }
         }
     }
 }
@@ -40,9 +51,8 @@ pub struct Schedular<'a>{
 
 pub struct SchedularGaurd<'a>
 {
-    func: Option<DynTaskImpl<ArcLatch,()>>,
-    latch: ArcLatch,
-    _marker: PhantomData<&'a ()>
+    func: DynamicPromise<()>,
+    _marker: PhantomData<&'a ()>,
 }
 
 impl<'a> SchedularGaurd<'a>
@@ -52,43 +62,22 @@ impl<'a> SchedularGaurd<'a>
     }
 
     pub fn is_done(&self) -> bool{
-        self.latch.done()
-    }
-}
-
-impl<'a> Drop for SchedularGaurd<'a>
-{
-    fn drop(&mut self) {
-        while !self.latch.done(){
-            task::steal();
-        }
-        // Propagate posible panic.
-        unsafe{
-            self.func.take().unwrap().into_result();
-        }
+        self.func.done()
     }
 }
 
 impl<'a> Schedular<'a>{
     pub fn execute<F>(&mut self,func: F) -> SchedularGaurd<'a>
-        where F: FnMut(Args) -> bool + Send + 'a,
+        where F: FnOnce(Args) + Send + 'a,
     {
-        let mut res = SchedularGaurd{
-            func: None,
-            latch: ArcLatch::new(),
-            _marker: PhantomData,
-        };
         let arg = Args{ components: self.components};
-        res.func = unsafe{
-            let temp = Some(DynTaskImpl::new(res.latch.clone(),move || {
-                    let mut func = func;
-                    while !func(arg.clone()){
-                        task::steal();
-                    }
-            }));
-            task::push_global(temp.as_ref().unwrap());
-            temp
+        let res = unsafe{
+             SchedularGaurd{
+                func: DynamicPromise::new_non_static(move || func(arg)),
+                _marker: PhantomData,
+            }
         };
+        res.func.run();
         res
     }
 
@@ -98,9 +87,8 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let a = if let Some(x) = args.borrow::<A>(){ x }else{return false;};
+            let a = args.borrow::<A>();
             func.get()(&a);
-            true
         });
     }
 
@@ -111,10 +99,9 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let a = if let Some(x) = args.borrow::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
+            let a = args.borrow::<A>();
+            let b = args.borrow::<B>();
             func.get()(&a,&b);
-            true
         });
     }
 
@@ -126,11 +113,10 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let a = if let Some(x) = args.borrow::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
-            let c = if let Some(x) = args.borrow::<C>(){ x }else{return false;};
+            let a = args.borrow::<A>();
+            let b = args.borrow::<B>();
+            let c = args.borrow::<C>();
             func.get()(&a,&b,&c);
-            true
         });
     }
 
@@ -143,12 +129,11 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let a = if let Some(x) = args.borrow::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
-            let c = if let Some(x) = args.borrow::<C>(){ x }else{return false;};
-            let d = if let Some(x) = args.borrow::<D>(){ x }else{return false;};
+            let a = args.borrow::<A>();
+            let b = args.borrow::<B>();
+            let c = args.borrow::<C>();
+            let d = args.borrow::<D>();
             func.get()(&a,&b,&c,&d);
-            true
         });
     }
 
@@ -158,10 +143,9 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return false;};
+            let mut a = args.borrow_mut::<A>();
             // TODO: Find a better way.
             func.get()(&mut a);
-            true
         });
     }
 
@@ -172,11 +156,10 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
+            let mut a = args.borrow_mut::<A>();
+            let b = args.borrow::<B>();
             // TODO: Find a better way.
             func.get()(&mut a,&b);
-            true
         });
     }
 
@@ -188,12 +171,10 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
-            let c = if let Some(x) = args.borrow::<C>(){ x }else{return false;};
-            // TODO: Find a better way.
+            let mut a = args.borrow_mut::<A>();
+            let b = args.borrow::<B>();
+            let c = args.borrow::<C>();
             func.get()(&mut a,&b,&c);
-            true
         });
     }
 
@@ -206,13 +187,11 @@ impl<'a> Schedular<'a>{
     {
         let func = GetOnce::new(func);
         self.execute(move |args|{
-            let mut a = if let Some(x) = args.borrow_mut::<A>(){ x }else{return false;};
-            let b = if let Some(x) = args.borrow::<B>(){ x }else{return false;};
-            let c = if let Some(x) = args.borrow::<C>(){ x }else{return false;};
-            let d = if let Some(x) = args.borrow::<D>(){ x }else{return false;};
-            // TODO: Find a better way.
+            let mut a = args.borrow_mut::<A>();
+            let b = args.borrow::<B>();
+            let c = args.borrow::<C>();
+            let d = args.borrow::<D>();
             func.get()(&mut a,&b,&c,&d);
-            true
         });
     }
 }
