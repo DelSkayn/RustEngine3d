@@ -1,0 +1,6 @@
+[package]
+name = "tungsten_render_ogl"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies]

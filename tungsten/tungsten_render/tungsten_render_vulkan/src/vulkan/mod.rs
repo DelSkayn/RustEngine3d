@@ -43,7 +43,7 @@ impl Vulkan{
 
     pub fn new(window: WindowContext) -> Result<Self,Error>{
         info!("Creating vulkan renderer.");
-        let extensions = InstanceExtensions::supported_by_core();
+        let extensions = InstanceExtensions::supported_by_core().unwrap();
         let layers = vec![
             &LAYER_NAME_1,
             &LAYER_NAME_2,

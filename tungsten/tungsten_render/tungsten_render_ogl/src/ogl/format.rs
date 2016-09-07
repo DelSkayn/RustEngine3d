@@ -1,6 +1,6 @@
-extern crate nalgebra;
+extern crate cgmath;
 
-use self::nalgebra::{Matrix4};
+use self::cgmath::{Matrix4};
 
 use super::glium::backend::Context;
 use super::glium::{VertexBuffer,IndexBuffer};

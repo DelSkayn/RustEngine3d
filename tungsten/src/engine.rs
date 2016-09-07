@@ -9,7 +9,6 @@ use super::tungsten_render::Render;
 use super::Game;
 use super::commands;
 use task::promise::Promise;
-use super::task::{Config,config};
 
 const BANNER: &'static str = r#"
     ______                                      __                       
@@ -25,7 +24,7 @@ const BANNER: &'static str = r#"
 
 /// The engine object holds all the data neccesary for the engine.
 pub struct Engine<G: Game + Send> {
-    game: G,debug_assertions
+    game: G,
     window: Window,
     console: Console<SystemTerminal>,
     render: Render,
@@ -40,8 +39,8 @@ impl<G: Game + Send> Engine<G> {
         println!("\x1B[1;31m{}\x1B[0m", BANNER);
         println!("\x1B[1;31m--------------------------- Engine Starting! -----------------------------\x1B[0m");
 
-        Logger::init().unwrap();
         Registery::read_from_file();
+        Logger::init().unwrap();
         let mut console = Console::new(SystemTerminal::new());
         commands::add_commands(&mut console);
         let window = Window::from_registry();
@@ -57,6 +56,7 @@ impl<G: Game + Send> Engine<G> {
     }
 
     fn game_loop(&mut self) {
+        /*
         while State::running(){
             let window = &mut self.window;
             let console = &mut self.console;
@@ -66,8 +66,21 @@ impl<G: Game + Send> Engine<G> {
             let ren = Promise::new(|| render.render());
             win.run();
             con.run();
-            ren.run();
             self.game.update();
+            ren.run();
         }
+        */
+        while State::running(){
+            trace!("Frame start");
+            let window = &mut self.window;
+            let console = &mut self.console;
+            let render = &mut self.render;
+            window.update();
+            console.update();
+            self.game.update();
+            render.render();
+            trace!("Frame end");
+        }
+        
     }
 }

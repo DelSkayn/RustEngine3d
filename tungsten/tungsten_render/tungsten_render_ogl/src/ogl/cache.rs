@@ -1,5 +1,7 @@
+extern crate cgmath;
+use self::cgmath::*;
+
 use super::glium::backend::Context;
-use super::super::tungsten_core::format::Transform;
 
 use super::super::RenderObjects;
 use super::StaticMeshNoTexture;
@@ -9,7 +11,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 pub struct CachedData{
-    pub transform: Transform,
+    pub transform: Decomposed<Vector3<f32>,Quaternion<f32>>,
     pub mesh: Rc<StaticMeshNoTexture>,
 }
 

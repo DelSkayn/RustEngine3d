@@ -1,12 +1,9 @@
 
-use task::promise::DynamicPromise;
 use task::worker;
 
 use super::component::{Components,ComponentStorage,ComponentStorageBorrowReadGuard,ComponentStorageBorrowWriteGuard};
 use super::get_once::GetOnce;
 
-use std::mem;
-use std::marker::PhantomData;
 
 pub type ArgReadGaurd<'a,T> = ComponentStorageBorrowReadGuard<'a,T>;
 pub type ArgWriteGaurd<'a,T> = ComponentStorageBorrowWriteGuard<'a,T>;
@@ -48,37 +45,19 @@ pub struct Schedular<'a>{
     components: &'a Components,
 }
 
-
-pub struct SchedularGaurd<'a>
-{
-    func: DynamicPromise<()>,
-    _marker: PhantomData<&'a ()>,
-}
-
-impl<'a> SchedularGaurd<'a>
-{
-    pub fn wait(self){
-        mem::drop(self);
-    }
-
-    pub fn is_done(&self) -> bool{
-        self.func.done()
-    }
-}
-
 impl<'a> Schedular<'a>{
-    pub fn execute<F>(&mut self,func: F) -> SchedularGaurd<'a>
+    #[doc(hidden)]
+    pub fn from_component(c: &'a Components) -> Self{
+        Schedular{
+            components: c,
+        }
+    }
+
+    pub fn execute<F>(&mut self,func: F)
         where F: FnOnce(Args) + Send + 'a,
     {
         let arg = Args{ components: self.components};
-        let res = unsafe{
-             SchedularGaurd{
-                func: DynamicPromise::new_non_static(move || func(arg)),
-                _marker: PhantomData,
-            }
-        };
-        res.func.run();
-        res
+        func(arg);
     }
 
     pub fn w0r1run<A,F>(&mut self,func: F) 

@@ -70,6 +70,10 @@ pub extern crate tungsten_asset;
 pub extern crate tungsten_logic;
 pub extern crate task;
 
+#[macro_use]
+extern crate log;
+
+
 mod engine;
 pub use engine::*;
 
@@ -96,15 +100,19 @@ pub trait Game{
 
 /// The trait representing a game running on the engine.
 /// This trait does not take a console.
-pub trait SimpleGame: Game + Sized{
+pub trait SimpleGame{
+    fn new(render: &mut Render) -> Self;
 
-    /// Called when the engine is started. 
-    /// Should return a fully intialized game.
+    fn update(&mut self){}
+}
+
+impl<G: SimpleGame> Game for G{
     fn new<T: Terminal>(render: &mut Render,_: &mut Console<T>) -> Self{
-        Self::new_simple(render)
+        G::new(render)
     }
 
-    /// Called once a frame should be used to update game logic.
-    fn new_simple(render: &mut Render) -> Self;
+    fn update(&mut self){
+        self.update()
+    }
 }
 

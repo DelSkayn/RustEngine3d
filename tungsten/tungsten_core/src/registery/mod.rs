@@ -180,7 +180,7 @@ impl Registery {
 
     pub fn read_from_file() {
         let path = SETTINGS_FILE.read().unwrap().clone();
-        info!("Reading config file at: {}",path.to_str().unwrap());
+        println!("Reading config file at: {}",path.to_str().unwrap());
         let file = File::open(&path);
         if let Ok(mut x) = file{
             let res = x.read_to_end().wait()
@@ -197,18 +197,18 @@ impl Registery {
                             }
                         }
                         None => {
-                            warn!("Errors while parsing registry file: {:?}", parser.errors);
+                            println!("Warn: Errors while parsing registry file: {:?}", parser.errors);
                             return;
                         }
                     }
 
                 }
                 Err(e) => {
-                    warn!("Could not read config file. reason : {:?}",e);
+                    println!("Could not read config file. reason : {:?}",e);
                 }
             }
         }else{
-            warn!("Log file not found, using default.");
+            println!("Log file not found, using default.");
         }
     }
 }

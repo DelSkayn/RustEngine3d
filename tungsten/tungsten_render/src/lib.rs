@@ -5,7 +5,7 @@
 //! # A summary
 //!
 //! - The `Render` struct is the root struct and contains all the data the rendering engine needs
-//!   to render. 
+//!   to render.
 //!
 //! - In order to render the user needs to register a render object at the render engine. This
 //!   object can then be mutated as nessacary and will be read from by the render engine when it
@@ -16,31 +16,24 @@
 #![crate_type = "lib"]
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate log;
 extern crate task;
 extern crate tungsten_core;
 extern crate tungsten_asset;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate glium;
+extern crate tungsten_render_ogl;
+extern crate tungsten_render_vulkan;
 
 use task::sync::mutate_inspect::{Inspector,Mutator};
 use task::sync::mutate_inspect;
 
 use tungsten_core::registery::Registery;
 use tungsten_core::window::WindowContext;
-
 use tungsten_asset::{AssetData,Mesh};
 
 mod format;
-mod vulkan;
-mod ogl;
 
 pub use self::format::*;
-use self::vulkan::Vulkan;
-use self::ogl::Ogl;
-
-
 
 #[derive(Debug)]
 pub enum Error{

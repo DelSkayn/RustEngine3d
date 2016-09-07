@@ -1,6 +1,5 @@
-extern crate nalgebra;
-
-use self::nalgebra::*;
+extern crate cgmath;
+use self::cgmath::*;
 
 use super::super::glium::Surface;
 use super::super::glium::Frame;
@@ -10,7 +9,9 @@ use super::super::glium::draw_parameters::{DrawParameters,Depth,DepthTest};
 
 use std::rc::Rc;
 
-use super::*;
+use tungsten_core::util::Cast;
+
+use super::data;
 use super::super::cache::Cache;
 
 pub struct PipeLine{
@@ -39,18 +40,19 @@ impl PipeLine{
                 },
                 .. Default::default()
             };
-            let p = Perspective3::<f32>::new(800.0/600.0,1.5,0.1,1000.0).to_matrix();
-            let v = Matrix4::<f32>::new_identity(4);
-            let m: Matrix4<f32> = Cast::from(object.transform.as_matrix());
+            let p = PerspectiveFov{
+                aspect: 800.0/600.0,
+                fovy: Rad::from(Deg(90.0)),
+                near: 0.1,
+                far: 1000.0,
+            }.into();
+            let v: Matrix4<f32> = One::one();
+            let m: Matrix4<f32> = Cast::<f32>::cast(object.transform.into());
 
             let mv = (v * m).clone();
             let mvp =  p.clone() * v * m;
 
-            let a_mvp: [[f32;4];4] = mvp.as_ref().clone();
-            let a_mv: [[f32;4];4] = mv.as_ref().clone();
-            let a_p: [[f32;4];4] = p.as_ref().clone();
-
-            let uni = uniform!{MVPMat: a_mvp,MVMat: a_mv,PMat: a_p};
+            let uni = uniform!{MVPMat: mvp,MVMat: mv,PMat: p};
             frame.draw(&mesh.buffer,&mesh.index,&self.program,&uni,&draw_para).unwrap();
         }
     }

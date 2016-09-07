@@ -12,7 +12,8 @@ glutin = "*"
 glium = "*"
 crossbeam = "*"
 libc = "*"
-nalgebra = "0.9.0"
+cgmath = "0.9.0"
+backtrace = "*"
 
 [dependencies.task]
 path = "../../task-rs"

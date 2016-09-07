@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["DelSkayn <yoko.minsky@gmail.com>"]
 
 [dependencies]
-nalgebra = "0.9.0"
+cgmath = "*"
 vulkano = "*"
 glium = "*"
 log = "*"
@@ -17,3 +17,9 @@ path = "../tungsten_core"
 
 [dependencies.tungsten_asset]
 path = "../tungsten_asset"
+
+[dependencies.tungsten_render_ogl]
+path = "tungsten_render_ogl"
+
+[dependencies.tungsten_render_vulkan]
+path = "tungsten_render_vulkan"

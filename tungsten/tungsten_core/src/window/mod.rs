@@ -108,7 +108,7 @@ impl Window {
     pub fn from_registry() -> Self {
         info!("Creating window from settings!");
 
-        let dimensions: [u64; 2] = Registery::get("window.size").or([300,300]);
+        let dimensions: [u64; 2] = Registery::get("window.size").or([800,600]);
         let vsync = Registery::get("window.vsync").or(false);
         let position: [u64; 2] = Registery::get("window.position").or([0,0]);
         let title = Registery::get("window.title").or("Tungsten engine".to_string());

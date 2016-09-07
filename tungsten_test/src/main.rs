@@ -1,7 +1,4 @@
 extern crate tungsten;
-
-extern crate nalgebra;
-
 extern crate rand;
 
 use self::tungsten::task::{self,Config,config};
@@ -9,7 +6,7 @@ use self::tungsten::Game;
 use self::tungsten::render::{Render,RegisteredObject,StaticRenderObject};
 use self::tungsten::asset::Assets;
 use self::tungsten::core::console::{Console,Terminal};
-use self::tungsten::core::format::{Vector3,Transform,Quaternion};
+use self::tungsten::core::format::{Vector3,Transform,Quaternion,Norm};
 
 struct TestGame{
     render_handle: Vec<RegisteredObject>,

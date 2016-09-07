@@ -17,10 +17,10 @@ impl BitMap {
     fn set(&mut self, i: usize) {
         let index = i / 8;
         let bit = i % 8;
-        while index > self.0.len() {
+        while index >= self.0.len() {
             self.0.push(0);
         }
-        self.0[i] |= 1 << bit;
+        self.0[index] |= 1 << bit;
     }
 
     fn unset(&mut self, i: usize) {
@@ -29,14 +29,17 @@ impl BitMap {
         while index > self.0.len() {
             self.0.push(0);
         }
-        self.0[i] &= !(1 << bit);
+        self.0[index] &= !(1 << bit);
     }
 
     fn get(&self, i: usize) -> bool {
         let index = i / 8;
         let bit = i % 8;
+        if index >= self.0.len(){
+            return false;
+        }
         assert!(index <= self.0.len());
-        (self.0[i] & (1 << bit)) != 0
+        (self.0[index] & (1 << bit)) != 0
     }
 
     fn resize(&mut self) -> usize {
@@ -106,7 +109,7 @@ impl<T: Component> ComponentStorage for VecStorage<T> {
         if self.unused.get(i) {
             panic!("Can not insert a component in place of an existing one.");
         }
-        if self.components.capacity() < i {
+        if self.components.capacity() < i + 1 {
             self.components.reserve(i + 1);
         }
         unsafe {
@@ -138,12 +141,12 @@ impl<T: Component> ComponentStorage for VecStorage<T> {
     }
 }
 
-struct Iter<'a,T: Sized + 'a>{
+pub struct Iter<'a,T: Sized + 'a>{
     borrow: &'a VecStorage<T>,
     index: Index,
 }
 
-struct IterMut<'a,T: Sized + 'a>{
+pub struct IterMut<'a,T: Sized + 'a>{
     borrow: *mut VecStorage<T>,
     index: Index,
     _marker: PhantomData<&'a VecStorage<T>>,
@@ -184,7 +187,7 @@ impl<'a,T: Sized + 'a> Iterator for IterMut<'a,T>{
 impl<T: Sized> VecStorage<T>{
 
     /// Returns a iterable object.
-    fn iter<'a>(&'a self) -> Iter<'a,T>{
+    pub fn iter<'a>(&'a self) -> Iter<'a,T>{
         Iter{
             borrow: self,
             index: 0,
@@ -192,7 +195,7 @@ impl<T: Sized> VecStorage<T>{
     }
 
     /// Returns a iterable object returning mutable references.
-    fn iter_mut<'a>(&'a mut self) -> IterMut<'a,T>{
+    pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a,T>{
         IterMut{
             borrow: self,
             index: 0,

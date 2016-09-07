@@ -33,5 +33,4 @@ pub mod util;
 pub mod console;
 pub mod state;
 pub mod io;
-pub mod format;
 

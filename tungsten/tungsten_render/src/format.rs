@@ -1,17 +1,18 @@
-extern crate nalgebra;
+extern crate cgmath;
+use self::cgmath::*;
 
-use tungsten_core::format::Transform;
-
-use self::nalgebra::{Perspective3,Vector3,Matrix4,ToHomogeneous,Isometry3,Point3,Cast};
+use tungsten_core::util::Cast;
 
 #[derive(Clone,Copy)]
 pub struct StaticRenderObject{
-    pub transform: Transform,
+    pub pos: Point3<f64>,
+    pub rot: Quaternion<f64>,
+    pub scale: f64,
 }
 
 pub struct Camera{
-    pos: Point3<f64>,//f64 to preserve presision
-    look_at: Point3<f64>,
+    pos: Point3<f32>,
+    look_at: Point3<f32>,
     up: Vector3<f32>,
     fov: f32,
     near: f32,
@@ -20,16 +21,19 @@ pub struct Camera{
 
 impl Camera{
     pub fn as_transform_matrix(&self) -> Matrix4<f32>{
-        let pos = Cast::<Point3<f64>>::from(self.pos);
-        let look_at = Cast::<Point3<f64>>::from(self.look_at);
-        Isometry3::new_observer_frame(&pos,&look_at,&self.up).to_homogeneous()
+        Decomposed::<Vector3<f32>,Quaternion<f32>>::look_at(self.pos,self.look_at,self.up).into()
     }
 
-    pub fn as_perspective_matrix(&self,aspect: f32) -> Matrix4<f32>{
-        Perspective3::new(aspect,self.fov,self.near,self.far).to_matrix()
+    pub fn as_perspective_matrix(&self,aspect: f32) -> cgmath::Matrix4<f32>{
+        PerspectiveFov{
+            fovy: Deg(self.fov).into(),
+            aspect: aspect,
+            near: self.near,
+            far: self.far,
+        }.into()
     }
 
-    pub fn as_matrix(&self, aspect: f32) -> Matrix4<f32>{
+    pub fn as_matrix(&self, aspect: f32) -> cgmath::Matrix4<f32>{
         self.as_transform_matrix() * self.as_perspective_matrix(aspect)
     }
 }
