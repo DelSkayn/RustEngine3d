@@ -11,37 +11,62 @@
 //!
 //! - Creating a render que from the current data.
 //!
+//! Not(!) part of its responisiblities are
+//!
+//! - Sorting renderque properly.
+//!
+//! - Caching render data.
 //!
 #![allow(dead_code)]
+#![allow(unused_imports)]
 extern crate task;
 extern crate cgmath;
 extern crate tungsten_asset;
 
-use self::task::sync::mutate_inspect::{self,Inspector};
-pub use self::task::sync::mutate_inspect::Mutator;
+mod objects;
+mod format;
 
+use self::task::sync::mutate_inspect::Inspector;
 use self::cgmath::*;
+use self::tungsten_asset::{Mesh,Container};
 
-use self::tungsten_asset::{Con
+
+use self::objects::StaticObjects;
+pub use self::format::*;
+
 /// the renderer trait needs to be implemented by all render backends.
 pub trait Renderer {
-    fn render(&self);
+    fn render(&self,que: &[RenderData]);
 }
 
-impl<T: Renderer> Renderer for Box<T>{
-    fn render(&self){
-        self.render();
+impl Renderer for Box<Renderer>{
+    fn render(&self,que: &[RenderData]){
+        (**self).render(que);
     }
 }
 
-pub struct RenderObject{
-    transform: Decomposed<Vector3<f64>,Quarternion<f64>>,
-    mesh
+/// Primary struct for the front end.
+/// This struct combines all the functionality into one object.
+pub struct Front<T: Renderer>{
+    renderer: T,
+    objects: StaticObjects,
 }
 
-pub struct Front<T: Render>{
-    renderer: T,
-    objects: Objects,
+impl<T: Renderer> Front<T>{
+    pub fn new(renderer: T) -> Self{
+        Front{
+            renderer: renderer,
+            objects: StaticObjects::new(),
+        }
+    }
+
+    pub fn add_object(&mut self,object: Inspector<RenderObject>){
+        self.objects.add(object);
+    }
+
+    pub fn render(&mut self){
+
+    }
 }
 
 

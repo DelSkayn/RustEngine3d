@@ -34,9 +34,9 @@ mod register_type;
 use self::register_type::RegisteryType;
 
 lazy_static!{
-    static ref SETTINGS: RwLock<Registery> 
+    static ref SETTINGS: RwLock<Registery>
         = RwLock::new(Default::default());
-    static ref SETTINGS_FILE: RwLock<PathBuf> 
+    static ref SETTINGS_FILE: RwLock<PathBuf>
         = RwLock::new(Path::new("./config/registery.toml").to_path_buf());
 }
 
@@ -67,7 +67,7 @@ impl<T> RegResult<T>{
             panic!();
         }
     }
-    
+
     pub fn is_ok(&self) -> bool{
         if let &RegResult::Ok(_) = self{
             true
@@ -114,61 +114,61 @@ impl Registery {
 
     pub fn get_self<T>(&self, name: &str) -> Result<T>
         where T: RegisteryType
-    {
-        Self::get_rec(&self.0, name)
-    }
+        {
+            Self::get_rec(&self.0, name)
+        }
 
     fn get_rec<T>(table: &Table, name: &str) -> Result<T>
         where T: RegisteryType
-    {
-        if name.contains('.') {
-            let (first, rest) = name.split_at(name.find('.').unwrap());
-            let rest = &rest[1..rest.len()];
-            let res = table.get(first).ok_or(Error::EntryDoesntExist(name.to_string()));
-            if let Err(x) = res{
-                return RegResult::Err(x);
+        {
+            if name.contains('.') {
+                let (first, rest) = name.split_at(name.find('.').unwrap());
+                let rest = &rest[1..rest.len()];
+                let res = table.get(first).ok_or(Error::EntryDoesntExist(name.to_string()));
+                if let Err(x) = res{
+                    return RegResult::Err(x);
+                }
+                match *res.unwrap() {
+                    Value::Table(ref t) => Self::get_rec(t, rest),
+                    _ => RegResult::new(Err(Error::EntryDoesntExist(name.to_string()))),
+                }
+            } else {
+                let res = table.get(name).ok_or(Error::EntryDoesntExist(name.to_string()));
+                if let Err(x) = res{
+                    return RegResult::Err(x);
+                }
+                RegResult::new(T::from_value(res.unwrap()).ok_or(Error::InvalidType))
             }
-            match *res.unwrap() {
-                Value::Table(ref t) => Self::get_rec(t, rest),
-                _ => RegResult::new(Err(Error::EntryDoesntExist(name.to_string()))),
-            }
-        } else {
-            let res = table.get(name).ok_or(Error::EntryDoesntExist(name.to_string()));
-            if let Err(x) = res{
-                return RegResult::Err(x);
-            }
-            RegResult::new(T::from_value(res.unwrap()).ok_or(Error::InvalidType))
         }
-    }
 
     pub fn get<T>(name: &str) -> Result<T>
         where T: RegisteryType
-    {
-        SETTINGS.read().expect("Registery lock poised!").get_self(name)
-    }
+        {
+            SETTINGS.read().expect("Registery lock poised!").get_self(name)
+        }
 
     pub fn set_self<T>(&mut self, name: &str, value: T)
         where T: RegisteryType
-    {
-        let mut value = T::to_value(value);
-        if name.contains('.') {
-            let (first, rest) = name.split_at(name.find('.').unwrap());
-            let rest = &rest[1..rest.len()];
-            for s in rest.rsplit('.') {
-                let mut new = Table::new();
-                new.insert(s.to_string(), value);
-                value = Value::Table(new);
+        {
+            let mut value = T::to_value(value);
+            if name.contains('.') {
+                let (first, rest) = name.split_at(name.find('.').unwrap());
+                let rest = &rest[1..rest.len()];
+                for s in rest.rsplit('.') {
+                    let mut new = Table::new();
+                    new.insert(s.to_string(), value);
+                    value = Value::Table(new);
+                }
+                self.0.insert(first.to_string(), value);
+            } else {
+                self.0.insert(name.to_string(), value);
             }
-            self.0.insert(first.to_string(), value);
-        } else {
-            self.0.insert(name.to_string(), value);
         }
-    }
     pub fn set<T>(name: &str, value: T)
         where T: RegisteryType
-    {
-        SETTINGS.write().unwrap().set_self(name, value)
-    }
+        {
+            SETTINGS.write().unwrap().set_self(name, value)
+        }
 
     pub fn set_full(registry: Registery) {
         (*SETTINGS.write().expect("Registery lock poised!")) = registry;
@@ -201,7 +201,6 @@ impl Registery {
                             return;
                         }
                     }
-
                 }
                 Err(e) => {
                     println!("Could not read config file. reason : {:?}",e);

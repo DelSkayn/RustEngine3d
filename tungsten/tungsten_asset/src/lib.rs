@@ -42,9 +42,11 @@ pub enum Error{
     ExtensionUnknow,
 }
 
+/// A struct representing a id of a mesh.
 #[derive(Clone,Copy,Eq,PartialEq,Hash)]
 pub struct AssetId(usize);
 
+/// Data about an asset.
 pub struct AssetData<T> {
     name: String,
     id: AssetId,
@@ -75,7 +77,7 @@ impl<T> Clone for AssetData<T>{
     }
 }
 
-/// Asset struct 
+/// Asset struct
 /// The struct must be used with static function.
 pub struct Assets{
     meshes: AssetMap<Mesh>,
@@ -89,6 +91,7 @@ impl Assets{
         let mut meshes = AssetMap::new();
         let mut textures = AssetMap::new();
         let mut materials = AssetMap::new();
+
         let material: Material = Default::default();
         let mesh: Mesh = Default::default();
         let texture: Texture = Default::default();
@@ -104,7 +107,7 @@ impl Assets{
             id: AssetId(0),
             data: Container::new(mesh),
         });
-        
+
         materials.insert(AssetData{
             name: "default".to_string(),
             id: AssetId(0),
@@ -118,34 +121,47 @@ impl Assets{
         }
     }
 
-    pub fn load_mesh<S,T>(name: T,path: S) 
-        where S: AsRef<Path>,
-              T: Into<String>{
-        Self::update_pending();
-        let name = name.into();
-        info!("Loading mesh \"{}\" at \"{}\".",name,path.as_ref().to_str().unwrap());
-        if Self::conflicting_mesh(&name){
-            return;
-        }
-        let cont = Container::empty();
-        Self::place_mesh(name,cont.clone());
-        // create load job.
-        let file = File::open(&path);
-        match file{ 
-            Ok(mut file) => {
-                if let Some(x) = path.as_ref().extension(){
-                    if let Some(x) = MeshFileTypes::from_extension(x.to_str().unwrap()){
-                        PENDING.push(file.read_to_end_callback(|data|{
-                            MeshLoader::load(x,data,cont);
-                        }));
+    /// Sets a mesh to be loaded with the given name from the given path.
+    /// The file type will be determined by the extension of the file at the given path
+    pub fn load_mesh<S,T>(name: T,path: S)
+        where S: AsRef<Path>, T: Into<String>
+        {
+            Self::update_pending();
+
+            let name = name.into();
+            info!("Loading mesh \"{}\" at \"{}\".",name,path.as_ref().to_str().unwrap());
+            // in case of a conflicting mesh name the function currently just returns
+            // Weird actually. TODO: Need to come up with a better sollution
+            if Self::conflicting_mesh(&name){
+                warn!("asset with name: \"{}\", already loaded",name);
+                return;
+            }
+
+            // create a container an place it in the
+            let cont = Container::empty();
+            Self::place_mesh(name,cont.clone());
+
+            // create load job.
+            let file = File::open(&path);
+            match file{
+                Ok(mut file) => {
+                    // file was properly opened
+                    if let Some(x) = path.as_ref().extension(){
+                        if let Some(x) = MeshFileTypes::from_extension(x.to_str().unwrap()){
+                            // could determin a proper file type
+                            PENDING.push(file.read_to_end_callback(|data|{
+                                MeshLoader::load(x,data,cont);
+                            }));
+                        }else{
+                            warn!("Could not determin a implemented file type for mesh file \"{}\" with extension \"{}\".",path.as_ref().to_str().unwrap(),x.to_str().unwrap_or("Gawk! an error"));
+                        }
+                    }else{
+                        warn!("Mesh file \"{}\", does not have an extension. Could not determin file type.",path.as_ref().to_str().unwrap());
                     }
-                }else{
-                    warn!("Mesh file \"{}\", does not have an extension. Could not determin file type.",path.as_ref().to_str().unwrap());
-                }
-            },
-            Err(e) => warn!("Error loading asset because of file error \"{}\"",e),
+                },
+                Err(e) => warn!("Error loading asset because of file error \"{}\"",e),
+            }
         }
-    }
 
     pub fn unload_mesh(name: &String){
         Self::update_pending();
@@ -165,9 +181,9 @@ impl Assets{
             None => {
                 debug!("Could not find asset returning default.");
                 borrow.meshes
-                      .get(AssetId(0))
-                      .unwrap()
-                      .clone()
+                    .get(AssetId(0))
+                    .unwrap()
+                    .clone()
             }
         }
     }
@@ -182,9 +198,9 @@ impl Assets{
             None => {
                 debug!("Could not find asset returning default.");
                 borrow.materials
-                      .get_name(&"default".to_string())
-                      .unwrap()
-                      .clone()
+                    .get_name(&"default".to_string())
+                    .unwrap()
+                    .clone()
             }
         }
     }
@@ -198,7 +214,6 @@ impl Assets{
     fn conflicting_mesh(name: &String) -> bool{
         let borrow = ASSETS.read().expect("Asset lock poised");
         if borrow.meshes.contains_key_name(name){
-            warn!("asset with name: \"{}\", already loaded",name);
             return true;
         }
         return false

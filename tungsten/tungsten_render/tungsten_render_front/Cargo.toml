@@ -7,7 +7,7 @@ authors = ["DelSkayn <yoko.minsky@gmail.com>"]
 path="../../../task-rs"
 
 [dependencies.tungsten_asset]
-path="../../tunsten_asset"
+path="../../tungsten_asset"
 
 [dependencies]
 cgmath = "*"

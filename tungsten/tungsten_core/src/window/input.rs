@@ -93,7 +93,7 @@ impl Input{
         unimplemented!();
     }
 
-    /// returns the position of the mouse 
+    /// returns the position of the mouse
     /// relative to the start position when grabbed.
     /// the position only changes while the mouse is grabed
     /// usefull for first person cams
@@ -101,7 +101,7 @@ impl Input{
         unimplemented!();
     }
 
-    /// returns the position of the mouse 
+    /// returns the position of the mouse
     /// relative to the position last frame when grabbed.
     /// when the mouse is not grabbed it will always return 0;
     pub fn mouse_rel_delta(&self) -> [f64; 2]{

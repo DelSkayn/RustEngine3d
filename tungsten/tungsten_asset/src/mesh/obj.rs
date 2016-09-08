@@ -9,8 +9,8 @@ struct ObjObject{
     pub tex_coords: Vec<[f32; 2]>,
     pub normals: Vec<[f32; 3]>,
     pub faces: Vec<Vec<u32>>,
-    pub normal_faces: Option<Vec<Vec<u32>>>, 
-    pub texture_faces: Option<Vec<Vec<u32>>>, 
+    pub normal_faces: Option<Vec<Vec<u32>>>,
+    pub texture_faces: Option<Vec<Vec<u32>>>,
 }
 
 struct Vertecies{
@@ -48,17 +48,17 @@ impl ObjLoader{
                 return;
             }
 
-            if object.normal_faces.is_some() 
+            if object.normal_faces.is_some()
                 && object.normal_faces.as_ref().unwrap().len() != object.faces.len(){
-                warn!("Amount of texture indecies or amount of normal indecies to small.");
-                return;
-            }
+                    warn!("Amount of texture indecies or amount of normal indecies to small.");
+                    return;
+                }
 
-            if object.texture_faces.is_some() 
+            if object.texture_faces.is_some()
                 && object.texture_faces.as_ref().unwrap().len() != object.faces.len(){
-                warn!("Amount of texture indecies or amount of normal indecies to small.");
-                return;
-            }
+                    warn!("Amount of texture indecies or amount of normal indecies to small.");
+                    return;
+                }
 
             place.change(Self::to_mesh(object));
 
@@ -82,7 +82,7 @@ impl ObjLoader{
                 "vt" => return Self::parse_text_coord(white,object),
                 "o" => return Self::parse_name(white,object),
                 _ => {
-                    //warn!("Unkown identifier \"{}\" in obj file: TODO make error once properly implemented",x); 
+                    //warn!("Unkown identifier \"{}\" in obj file: TODO make error once properly implemented",x);
                     return true;
                 },
             }
@@ -106,7 +106,7 @@ impl ObjLoader{
         if let Some(_) = line.next(){
             warn!("to many vertecies on a single line");
             return false;
-        }// to ma
+        }
 
         let x: f32 = if let Ok(v) = x_str.parse(){v} else {warn!("could not parse vertex");return false;};
         let y: f32 = if let Ok(v) = y_str.parse(){v} else {warn!("could not parse vertex");return false;};
@@ -138,13 +138,6 @@ impl ObjLoader{
         let u_str = if let Some(v) = line.next(){v} else {warn!("missing texture coord");return false;};
         let v_str = if let Some(v) = line.next(){v} else {warn!("missing texture coord");return false;};
 
-        /*
-           if let Some(_) = line.next(){
-           warn!("to many tex_coords on a single line");
-           return false;
-           }// to ma
-           */
-
         let u: f32 = if let Ok(v) = u_str.parse(){v} else {warn!("could not parse texture coord");return false;};
         let v: f32 = if let Ok(v) = v_str.parse(){v} else {warn!("could not parse texture coord");return false;};
 
@@ -154,7 +147,7 @@ impl ObjLoader{
 
     fn parse_face<'a,I: Iterator<Item = &'a str>>(line: I,object: &mut ObjObject) -> bool{
         let mut face = Vec::new();
-        let mut face_text = None; 
+        let mut face_text = None;
         let mut face_normal = None;
 
         let mut amount = 0;
@@ -171,7 +164,12 @@ impl ObjLoader{
 
             face.push(v_index);
 
+            // Adding texture and normal indecies if they exist.
             if let Ok(x) = t_index{
+                if face.len() > 1{
+                    warn!("missing texture coord face indecies in obj file");
+                    return false;
+                }
                 if let None = face_text{
                     face_text = Some(Vec::new());
                 }
@@ -179,16 +177,24 @@ impl ObjLoader{
             }
 
             if let Ok(x) = n_index{
+                if face.len() > 1{
+                    warn!("missing normal face indecies in obj file");
+                    return false;
+                }
                 if let None = face_normal{
                     face_normal= Some(Vec::new());
                 }
                 face_normal.as_mut().unwrap().push(x);
             }
         }
+
+        // Faces of with les then 3 indecies are lines or dots not faces
         if amount < 3{
             warn!("Missing indecies for a face.");
             return false;
         }
+
+        // push face to there place
         object.faces.push(face);
 
         if let Some(x) = face_text{
@@ -232,9 +238,10 @@ impl ObjLoader{
         let mut normals = Vec::with_capacity(object.normal_faces.as_ref().unwrap().len() * 3);
 
         for ref face in &object.faces{
-            // todo create a better algoritme.
+            // todo create a better algoritm.
+            // this does not work for a lot of faces.
             let start = face[0];
-            let mut current = face[1]; 
+            let mut current = face[1];
             for i in &face[2..]{
                 vertex.push(start);
                 vertex.push(current);
@@ -243,11 +250,12 @@ impl ObjLoader{
             }
         }
 
+        // do the same traingulation for texture coords if they exist and normals.
         if let Some(ref x) = object.texture_faces{
             let mut res = Vec::with_capacity(object.texture_faces.as_ref().unwrap().len() * 3);
             for face in x{
                 let start = face[0];
-                let mut current = face[1]; 
+                let mut current = face[1];
                 for i in &face[2..]{
                     res.push(start);
                     res.push(current);
@@ -260,7 +268,7 @@ impl ObjLoader{
 
         for face in object.normal_faces.as_ref().unwrap(){
             let start = face[0];
-            let mut current = face[1]; 
+            let mut current = face[1];
             for i in &face[2..]{
                 normals.push(start);
                 normals.push(current);
@@ -300,13 +308,18 @@ impl ObjLoader{
     /// Make mesh adressable by a single index.
     ///
     /// TODO: Current implementation removes flat shading. Fix that.
+    /// Atleast I think it does. Might not though. But it probebly does.
+    /// TODO: Test wether this actually removes flat shading.
     fn unwrap_indecies(indecies: &Indecies,object: &ObjObject) -> Vertecies{
         trace!("Obj: unwrap indecies");
         let length = indecies.vertex.len();
 
         let mut normals = Vec::with_capacity(length);
-        // Lot faster then manualy pushing everything first
+        // Lot faster then manualy pushing everything first.
+        // Would love a function which allows pushing a lot of objects in a single function call if
+        // the type supports Copy for that sweet memcpy perf.
         unsafe{normals.set_len(length)};
+
         let borrow = &indecies.normals;
         for i in 0..length{
             normals[indecies.vertex[i] as usize] = object.normals[borrow[i] as usize];
@@ -316,7 +329,7 @@ impl ObjLoader{
         let tex_coords;
         if indecies.texture.is_some(){
             let mut res = Vec::with_capacity(length);
-            // Lot faster then manualy pushing everything first
+            // Lot faster then manualy pushing everything first.
             unsafe{res.set_len(length)};
 
             let borrow = indecies.texture.as_ref().unwrap();

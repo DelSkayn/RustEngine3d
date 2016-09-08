@@ -1,6 +1,8 @@
 extern crate nalgebra;
 use self::nalgebra::*;
 
+/// Struct detailing the trans form struct.
+/// Use cgmath `Decomposed` instead.
 #[derive(Clone,Debug)]
 pub struct Transform{
     pub rotation: UnitQuaternion<f64>,
