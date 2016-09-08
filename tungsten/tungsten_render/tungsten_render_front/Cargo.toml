@@ -1,0 +1,15 @@
+[package]
+name = "tungsten_render_front"
+version = "0.1.0"
+authors = ["DelSkayn <yoko.minsky@gmail.com>"]
+
+[dependencies.task]
+path="../../../task-rs"
+
+[dependencies.tungsten_asset]
+path="../../tunsten_asset"
+
+[dependencies]
+cgmath = "*"
+
+
